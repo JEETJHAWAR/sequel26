@@ -30,6 +30,14 @@
 .hero-bg{position:absolute;inset:0;z-index:-2;
   background-image:url('images/campus-kochi.jpg'),url('images/confetti.jpg');
   background-size:cover;background-position:center;transform:scale(1.06);filter:saturate(1.15)}
+.hero-bg i{position:absolute;inset:0;background-size:cover;background-position:center;
+  opacity:0;animation:heroSlide 36s linear infinite}
+.hero-bg i:nth-child(2){animation-delay:6s}
+.hero-bg i:nth-child(3){animation-delay:12s}
+.hero-bg i:nth-child(4){animation-delay:18s}
+.hero-bg i:nth-child(5){animation-delay:24s}
+.hero-bg i:nth-child(6){animation-delay:30s}
+@keyframes heroSlide{0%{opacity:0}3%{opacity:1}17%{opacity:1}22%{opacity:0}100%{opacity:0}}
 .hero-veil{position:absolute;inset:0;z-index:-1;background:
   radial-gradient(120% 80% at 80% 6%, rgba(255,194,75,.20), transparent 58%),
   linear-gradient(to bottom, rgba(16,6,23,.82) 0%, rgba(16,6,23,.70) 34%, rgba(16,6,23,.95) 80%, var(--ink) 100%)}
@@ -63,6 +71,10 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 /* ---------- sections ---------- */
 .pad{padding-block:clamp(60px,8vh,100px)}
 .alt{background:var(--ink-2)}
+.bgphoto{position:relative;isolation:isolate}
+.bgphoto::before{content:"";position:absolute;inset:0;z-index:-1;background-image:
+  linear-gradient(rgba(16,6,23,.93),rgba(16,6,23,.97)),var(--bg-img);
+  background-size:cover;background-position:center}
 .two{display:grid;gap:clamp(26px,5vw,60px);grid-template-columns:1fr}
 @media(min-width:900px){.two{grid-template-columns:1fr 1fr;align-items:start}}
 .two p{margin:0 0 15px;color:var(--muted)}
@@ -147,17 +159,7 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .waiting .ref{font-family:var(--mono);font-size:1.1rem;color:var(--gold);
   background:rgba(0,0,0,.3);padding:9px 16px;border-radius:8px;display:inline-block;margin:6px 0 18px}
 
-/* ---------- faq + footer ---------- */
-.faq-list{margin-top:28px;border-top:1px solid var(--line)}
-details{border-bottom:1px solid var(--line)}
-summary{cursor:pointer;list-style:none;padding:18px 44px 18px 0;position:relative;
-  font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:1.22rem;line-height:1.12}
-summary::-webkit-details-marker{display:none}
-summary::after{content:"+";position:absolute;right:8px;top:50%;transform:translateY(-50%);
-  font-family:var(--mono);font-size:20px;color:var(--gold);transition:transform .2s ease}
-details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
-details p{margin:-4px 0 20px;color:var(--muted);font-size:.95rem;max-width:64ch}
-details b{color:var(--paper)}
+/* ---------- footer ---------- */
 
 footer{border-top:1px solid var(--line);padding-block:38px 100px}
 .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-end}
@@ -186,14 +188,21 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 .hero-inner > *:nth-child(4){animation-delay:.42s}
 .hero-inner > *:nth-child(5){animation-delay:.52s}
 @keyframes enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.rise{opacity:1;transform:none}.hero-inner > *{opacity:1;animation:none}}
+@media (prefers-reduced-motion:reduce){.rise{opacity:1;transform:none}.hero-inner > *{opacity:1;animation:none}.hero-bg i{animation:none}}
 </style>
 </head>
 <body>
 
 <!-- ===== HERO ===== -->
 <header class="hero">
-  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-bg" aria-hidden="true">
+    <i style="background-image:url('images/campus-kochi.jpg')"></i>
+    <i style="background-image:url('images/campus-front.jpg')"></i>
+    <i style="background-image:url('images/campus-main.jpg')"></i>
+    <i style="background-image:url('images/campus-lawn.jpg')"></i>
+    <i style="background-image:url('images/campus-garden.jpg')"></i>
+    <i style="background-image:url('images/campus-aerial.jpg')"></i>
+  </div>
   <div class="hero-veil" aria-hidden="true"></div>
   <div class="hero-top">
     <span class="mark"><i class="dot" aria-hidden="true"></i> BMS · IIMK KOCHI</span>
@@ -206,9 +215,9 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
     <p class="sub">IIM Kozhikode — Kochi Campus</p>
 
     <dl class="facts">
-      <div><dt>Date</dt><dd data-cfg="eventDate">Sun 6 September</dd></div>
-      <div><dt>Time</dt><dd data-cfg="eventTime">6:00 PM</dd></div>
-      <div><dt>Venue</dt><dd data-cfg="venue">Kochi Campus</dd></div>
+      <div><dt>Date</dt><dd data-cfg="eventDate">TBC</dd></div>
+      <div><dt>Time</dt><dd data-cfg="eventTime">TBC</dd></div>
+      <div><dt>Venue</dt><dd data-cfg="venue">TBC</dd></div>
       <div><dt>Pass</dt><dd class="gold" id="factPrice">₹800</dd></div>
     </dl>
 
@@ -227,7 +236,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 </noscript>
 
 <!-- ===== WHAT ===== -->
-<section class="alt pad">
+<section class="alt pad bgphoto" style="--bg-img:url('images/campus-front.jpg')">
   <div class="wrap two">
     <div class="rise">
       <p class="eyebrow">The night</p>
@@ -274,7 +283,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
         </div>
         <div class="field">
           <label for="roll">Roll number <span class="req">*</span></label>
-          <input type="text" id="roll" placeholder="Your BMS roll no.">
+          <input type="text" id="roll" placeholder="BMS/01/007">
           <div class="err hidden"></div>
         </div>
       </div>
@@ -397,7 +406,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 </section>
 
 <!-- ===== STATUS ===== -->
-<section class="alt pad" id="retrieve">
+<section class="alt pad bgphoto" id="retrieve" style="--bg-img:url('images/campus-garden.jpg')">
   <div class="wrap">
     <div class="rise" style="margin-bottom:26px">
       <p class="eyebrow">Already registered?</p>
@@ -416,30 +425,6 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
   </div>
 </section>
 
-<!-- ===== FAQ ===== -->
-<section class="pad" style="border-top:1px solid var(--line)">
-  <div class="wrap">
-    <div class="rise">
-      <p class="eyebrow">Before you ask</p>
-      <h2 class="h2">Fair questions<i>.</i></h2>
-    </div>
-    <div class="faq-list rise">
-      <details><summary>Why isn't my pass instant?</summary>
-        <p>Because a human checks every payment against our account. It's how we skip a payment gateway and its fees. Expect a few hours, faster during the day.</p></details>
-      <details><summary>Where do I find the reference number?</summary>
-        <p>GPay: tap the payment → <b>UPI transaction ID</b>, 12 digits. PhonePe: transaction details → <b>UTR</b>. Paytm: <b>UPI Ref No</b>. Any of them works.</p></details>
-      <details><summary>I paid the wrong amount.</summary>
-        <p>Message the organisers before submitting. Underpaid, we'll ask for the difference. Overpaid, we'll return it. Don't pay twice.</p></details>
-      <details><summary>Can I pay cash instead?</summary>
-        <p>Ask the organisers. We'd rather have it online so the headcount for food and seating is accurate, but we can add you manually and issue a code.</p></details>
-      <details><summary>Can I bring a friend from another programme?</summary>
-        <p>This one is BMS-01 and BMS-02 only. Passes are per person with your name on them.</p></details>
-      <details><summary>Is a refund possible?</summary>
-        <p>Up to the registration deadline, yes — message the organisers. After that we've already committed the spend on food and setup.</p></details>
-    </div>
-  </div>
-</section>
-
 <footer>
   <div class="wrap foot">
     <p><b>SEQUEL 26</b><br>Bachelor of Management Studies<br>IIM Kozhikode — Kochi Campus</p>
@@ -449,7 +434,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 </footer>
 
 <div class="sticky" id="sticky">
-  <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">₹800 · Sun 6 September</b></p>
+  <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">₹800 · TBC</b></p>
   <a class="btn" href="#register">Get pass</a>
 </div>
 
@@ -473,10 +458,10 @@ const CONFIG = {
   useStaticQR: false,
 
   eventName:     "SEQUEL 26",
-  eventDate:     "Sun 6 September",
-  eventDateFull: "Sunday 6 September 2026",
-  eventTime:     "6:00 PM",
-  venue:         "IIMK Kochi Campus",
+  eventDate:     "TBC",
+  eventDateFull: "To be confirmed",
+  eventTime:     "TBC",
+  venue:         "TBC",
   deadline:      "Wednesday 2 September",
   deadlineShort: "Registration closes 2 Sept",
 
@@ -545,6 +530,7 @@ $$("#batchSeg button").forEach(b=>{
     batch = b.dataset.v;
     $$("#batchSeg button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
     $("#batchErr").classList.add("hidden");
+    $("#roll").placeholder = "BMS/" + batch.slice(4) + "/007";
   });
 });
 
@@ -565,6 +551,17 @@ function loading(btn,on,label){
   btn.innerHTML = on ? '<i class="spin" aria-hidden="true"></i>' + label : label;
 }
 
+/* Roll numbers are BMS/01/XXX or BMS/02/XXX. Accepts sloppy separators
+   ("bms-01-47", "BMS 01 47") and bare digits (uses the picked batch),
+   and returns the canonical form — or "" if it can't be one. */
+function normRoll(raw){
+  let v = String(raw).trim().toUpperCase()
+            .replace(/[\\\-\s._]+/g,"/").replace(/\/+/g,"/").replace(/^\/|\/$/g,"");
+  if(/^\d{1,3}$/.test(v) && batch) v = "BMS/" + batch.slice(4) + "/" + v;
+  const m = v.match(/^BMS\/0?([12])\/(\d{1,3})$/);
+  return m ? "BMS/0" + m[1] + "/" + m[2].padStart(3,"0") : "";
+}
+
 function validateDetails(){
   let first=null;
   const fail=(el,msg)=>{ const f=el.closest(".field")||el; setError(f,msg); if(!first) first=f; };
@@ -573,7 +570,10 @@ function validateDetails(){
     first = $("#batchSeg");
   }
   if(!$("#name").value.trim()) fail($("#name"),"We need your name for the pass.");
-  if(!$("#roll").value.trim()) fail($("#roll"),"Roll number, please.");
+  const roll = normRoll($("#roll").value);
+  if(!roll) fail($("#roll"),"Format: BMS/01/007 or BMS/02/007.");
+  else if(batch && roll.slice(4,6) !== batch.slice(4))
+    fail($("#roll"),"That roll number says BMS/" + roll.slice(4,6) + ", but you picked " + batch + ".");
   if(!/^\d{10}$/.test($("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"")))
     fail($("#phone"),"Ten digits, no country code.");
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#email").value.trim()))
@@ -584,7 +584,7 @@ function validateDetails(){
 
 const details = () => ({
   name:  $("#name").value.trim(),
-  roll:  $("#roll").value.trim(),
+  roll:  normRoll($("#roll").value),
   phone: $("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,""),
   email: $("#email").value.trim().toLowerCase(),
   batch, website: $("#website").value.trim()
