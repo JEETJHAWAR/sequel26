@@ -88,6 +88,7 @@ function doPost(e) {
       case 'adminSetPrice':  return json(guard(body, adminSetPrice));
       case 'adminDecide':    return json(guard(body, adminDecide));
       case 'adminUpdate':    return json(guard(body, adminUpdate));
+      case 'adminDelete':    return json(guard(body, adminDelete));
 
       default: return json({ ok: false, error: 'Unknown action' });
     }
@@ -116,6 +117,9 @@ function actionRegister(b) {
 
   if (!name || !email || !roll || !phone || !batch) {
     return { ok: false, error: 'Please fill every field.' };
+  }
+  if (!/@iimk\.ac\.in$/.test(email)) {
+    return { ok: false, error: 'Use your IIMK email — it must end with @iimk.ac.in.' };
   }
 
   var lock = LockService.getScriptLock();
@@ -302,6 +306,28 @@ function adminUpdate(b) {
   }
   sheet.getRange(row, C.updated).setValue(new Date());
   return { ok: true };
+}
+
+/** Remove a registration outright. The row's email must match too, so a
+    stale row number (rows shift after another delete) can't hit the wrong
+    person — refresh and retry instead. */
+function adminDelete(b) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = getSheet();
+    var row = parseInt(b.row, 10);
+    if (!row || row < 2 || row > sheet.getLastRow()) return { ok: false, error: 'Bad row.' };
+    var email = String(b.email || '').trim().toLowerCase();
+    var have  = String(readCell(sheet, row, 'email') || '').trim().toLowerCase();
+    if (!email || have !== email) {
+      return { ok: false, error: 'Row moved — refresh the list and try again.' };
+    }
+    sheet.deleteRow(row);
+    return { ok: true };
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
+  }
 }
 
 

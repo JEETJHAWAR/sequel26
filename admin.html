@@ -75,6 +75,8 @@ dialog{border:1px solid var(--line-2);border-radius:var(--r);background:var(--pa
 dialog::backdrop{background:rgba(5,2,9,.72)}
 .mini.ok-btn{background:var(--ok-dim);box-shadow:inset 0 0 0 1px rgba(74,222,128,.5);color:#9CF0BC}
 .mini.ok-btn:hover{box-shadow:inset 0 0 0 1px var(--ok)}
+.mini.del-btn{color:#F0A3A3;box-shadow:inset 0 0 0 1px rgba(240,90,90,.4)}
+.mini.del-btn:hover{box-shadow:inset 0 0 0 1px #F05A5A}
 dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-size:1.7rem;margin:0 0 14px}
 </style>
 </head>
@@ -303,6 +305,7 @@ function render(){
     }else{
       actions = `<button type="button" class="mini" data-row="${r.row}" data-do="approve">Mark paid</button>`;
     }
+    actions += `<button type="button" class="mini del-btn" data-row="${r.row}" data-do="delete">Delete</button>`;
     return `<tr>
       <td class="nm">${esc(r.name)} ${r.checkedIn?'<span class="pill in">In</span>':""}</td>
       <td class="mono">${esc(r.batch)}</td>
@@ -346,6 +349,9 @@ $("#rows").addEventListener("click", async e=>{
                           "We couldn't find a payment with that reference number.");
     if(reason === null) return;
     payload = {action:"adminDecide", row, decision:"reject", reason};
+  }else if(what === "delete"){
+    if(!confirm(`Delete this registration completely?\n\n${rec.name} — ${rec.email}\nStatus: ${rec.status}\n\nThe row is removed from the sheet. No email is sent, nothing is refunded, and there is no undo.`)) return;
+    payload = {action:"adminDelete", row, email: rec.email};
   }else{
     payload = {action:"adminUpdate", row, field:"checkedIn"};
   }

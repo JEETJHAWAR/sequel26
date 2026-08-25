@@ -561,8 +561,8 @@ function validateDetails(){
     fail($("#roll"),"That roll number says BMS/" + roll.slice(4,6) + ", but you picked " + batch + ".");
   if(!/^\d{10}$/.test($("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"")))
     fail($("#phone"),"Ten digits, no country code.");
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#email").value.trim()))
-    fail($("#email"),"That email doesn't look right.");
+  if(!/^[^\s@]+@iimk\.ac\.in$/i.test($("#email").value.trim()))
+    fail($("#email"),"Use your IIMK email — it ends with @iimk.ac.in.");
   if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
   return !first;
 }
@@ -754,8 +754,8 @@ $("#findBtn").addEventListener("click", async ()=>{
   const em = $("#findEmail").value.trim().toLowerCase();
   $("#findNote").classList.add("hidden");
   clearError($("#findEmail").closest(".field"));
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){
-    setError($("#findEmail").closest(".field"), "Enter the email you registered with.");
+  if(!/^[^\s@]+@iimk\.ac\.in$/i.test(em)){
+    setError($("#findEmail").closest(".field"), "Enter the IIMK email you registered with (…@iimk.ac.in).");
     return;
   }
   if(!connected()){
