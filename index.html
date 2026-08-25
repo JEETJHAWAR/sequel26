@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SEQUEL 26 — Freshers · IIM Kozhikode, Kochi Campus</title>
+<meta name="description" content="SEQUEL 26. Register, pay by UPI, get your entry pass. BMS-01 and BMS-02, IIM Kozhikode Kochi Campus.">
+<meta name="theme-color" content="#100617">
+
+<!-- Link preview. AFTER PUBLISHING replace both URLs with your live address,
+     e.g. https://yourname.github.io/sequel26/ — WhatsApp needs an absolute URL. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SEQUEL 26">
+<meta property="og:title" content="SEQUEL 26 — Freshers">
+<meta property="og:description" content="Register, pay by UPI, get your pass. IIM Kozhikode, Kochi Campus.">
+<meta property="og:url" content="https://jeetjhawar.github.io/sequel26/">
+<meta property="og:image" content="https://jeetjhawar.github.io/sequel26/images/cover.jpg">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23100617'/%3E%3Ctext x='16' y='23' font-family='Arial' font-weight='900' font-size='18' fill='%23FFC24B' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="fonts/bigshoulders.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+
+<style>
+/* ---------- hero ---------- */
+.hero{position:relative;min-height:100svh;display:flex;flex-direction:column;
+  justify-content:flex-end;padding-block:clamp(76px,11vh,120px) clamp(34px,6vh,64px);
+  isolation:isolate;overflow:hidden}
+.hero-bg{position:absolute;inset:0;z-index:-2;
+  background-image:url('images/campus-kochi.jpg'),url('images/confetti.jpg');
+  background-size:cover;background-position:center;transform:scale(1.06);filter:saturate(1.15)}
+.hero-veil{position:absolute;inset:0;z-index:-1;background:
+  radial-gradient(120% 80% at 80% 6%, rgba(255,194,75,.20), transparent 58%),
+  linear-gradient(to bottom, rgba(16,6,23,.82) 0%, rgba(16,6,23,.70) 34%, rgba(16,6,23,.95) 80%, var(--ink) 100%)}
+.hero-top{position:absolute;top:0;left:0;right:0;padding:22px var(--gut);
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted-2)}
+.hero-top .mark{color:var(--paper);display:flex;align-items:center;gap:9px}
+.hero-top .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none}
+.hero-top .right{color:var(--gold);text-align:right}
+@media(max-width:600px){.hero-top .right{display:none}}
+.hero-inner{position:relative;width:100%}
+
+h1{font-family:var(--disp);font-weight:900;font-size:clamp(4.6rem,19vw,13rem);
+  line-height:.82;letter-spacing:-.012em;text-transform:uppercase;margin:0 0 6px;
+  background:linear-gradient(96deg,#FFD983 4%,#FFC24B 46%,#E39A16 96%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:.12em}
+h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);font-weight:800}
+.sub{font-family:var(--disp);text-transform:uppercase;font-weight:700;
+  font-size:clamp(1.1rem,3.4vw,1.9rem);color:var(--muted);margin:0 0 clamp(20px,3vh,30px);line-height:1.1}
+
+.facts{border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);
+  padding:clamp(14px,2.2vh,20px) 0;margin-bottom:clamp(20px,3vh,30px);
+  display:flex;flex-wrap:wrap;gap:8px 34px}
+.facts div{min-width:108px}
+.facts dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted-2);margin:0 0 3px}
+.facts dd{margin:0;font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:1.32rem;line-height:1;color:var(--paper)}
+.facts dd.gold{color:var(--gold)}
+.hero-cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+
+/* ---------- sections ---------- */
+.pad{padding-block:clamp(60px,8vh,100px)}
+.alt{background:var(--ink-2)}
+.two{display:grid;gap:clamp(26px,5vw,60px);grid-template-columns:1fr}
+@media(min-width:900px){.two{grid-template-columns:1fr 1fr;align-items:start}}
+.two p{margin:0 0 15px;color:var(--muted)}
+.two p:last-child{margin:0}
+.two strong{color:var(--paper);font-weight:600}
+.incl{list-style:none;margin:0;padding:0;display:grid;gap:1px;
+  background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.incl li{background:var(--panel);padding:15px 20px;display:flex;align-items:center;gap:13px;font-size:.96rem}
+.incl li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
+
+/* ---------- cards ---------- */
+.card{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:clamp(22px,4vw,32px);max-width:660px}
+.card-title{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin:0 0 20px;display:block}
+.card-title .n{color:var(--muted-2)}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
+  border-top:1px solid var(--line);margin-top:22px;padding-top:20px}
+.total span{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2)}
+.total b{font-family:var(--disp);font-weight:900;font-size:2.5rem;line-height:1;color:var(--gold)}
+
+/* ---------- payment ---------- */
+.payhead{text-align:center;padding-bottom:24px;border-bottom:1px solid var(--line);margin-bottom:24px}
+.payhead .amt{font-family:var(--disp);font-weight:900;font-size:clamp(3rem,13vw,4.4rem);
+  line-height:1;color:var(--gold);margin:4px 0 6px}
+.payhead .who{font-size:.92rem;color:var(--muted);margin:0}
+.payhead .who b{color:var(--paper)}
+
+.paygrid{display:grid;gap:22px;grid-template-columns:1fr}
+@media(min-width:660px){.paygrid{grid-template-columns:auto 1fr;align-items:center}}
+.qrbox{background:var(--paper);border-radius:14px;padding:12px;width:230px;margin-inline:auto;display:block}
+.qrbox canvas,.qrbox img{width:100%;height:auto;display:block;border-radius:6px}
+.payways{display:flex;flex-direction:column;gap:14px}
+.upirow{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);
+  box-shadow:inset 0 0 0 1px var(--line-2);border-radius:10px;padding:12px 14px}
+.upirow code{font-family:var(--mono);font-size:14px;color:var(--gold);flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paynote{font-size:.86rem;color:var(--muted-2);line-height:1.55;margin:0}
+.paynote b{color:var(--paper)}
+
+/* on a phone the QR is useless — you can't scan it with the phone holding it */
+@media(max-width:659px){
+  .payways{order:1} .qrwrap{order:2;border-top:1px solid var(--line);padding-top:22px}
+}
+.qrcap{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted-2);text-align:center;margin:12px 0 0}
+.confirm{border-top:1px solid var(--line);margin-top:26px;padding-top:26px}
+
+/* screenshot picker */
+.drop{display:flex;align-items:center;gap:14px;background:rgba(0,0,0,.26);
+  box-shadow:inset 0 0 0 1px var(--line-2);border-radius:10px;padding:14px;cursor:pointer;
+  transition:box-shadow .15s ease}
+.drop:hover{box-shadow:inset 0 0 0 1px rgba(247,240,230,.4)}
+.drop input{position:absolute;left:-9999px}
+.drop .ic{width:46px;height:46px;border-radius:9px;background:var(--gold-dim);flex:none;
+  display:grid;place-items:center;color:var(--gold);font-family:var(--mono);font-size:19px}
+.drop img.ic{object-fit:cover;background:none}
+.drop .tx{flex:1;min-width:0}
+.drop .tx b{display:block;font-size:14.5px;font-weight:600}
+.drop .tx span{font-size:12.5px;color:var(--muted-2);display:block;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- pass ---------- */
+.passwrap{max-width:560px}
+.passwrap canvas{width:100%;height:auto;border-radius:16px;display:block;
+  box-shadow:0 30px 70px -34px #000, inset 0 0 0 1px var(--line-2)}
+.dl{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.after{margin-top:26px}
+.after h4{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted-2);font-weight:400;margin:0 0 12px}
+.after ol{margin:0;padding-left:20px;color:var(--muted);font-size:.95rem}
+.after li{margin-bottom:8px}
+.after strong{color:var(--paper);font-weight:600}
+
+/* waiting */
+.waiting{max-width:560px;text-align:center;padding:40px 30px;border:1px solid var(--gold);
+  border-radius:var(--r);background:var(--gold-dim)}
+.waiting .big{font-family:var(--disp);text-transform:uppercase;font-weight:900;
+  font-size:clamp(2rem,7vw,2.8rem);line-height:.95;margin:0 0 14px}
+.waiting p{color:var(--muted);margin:0 0 10px;font-size:.96rem}
+.waiting b{color:var(--paper)}
+.waiting .ref{font-family:var(--mono);font-size:1.1rem;color:var(--gold);
+  background:rgba(0,0,0,.3);padding:9px 16px;border-radius:8px;display:inline-block;margin:6px 0 18px}
+
+/* ---------- faq + footer ---------- */
+.faq-list{margin-top:28px;border-top:1px solid var(--line)}
+details{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;padding:18px 44px 18px 0;position:relative;
+  font-family:var(--disp);text-transform:uppercase;font-weight:700;font-size:1.22rem;line-height:1.12}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:20px;color:var(--gold);transition:transform .2s ease}
+details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+details p{margin:-4px 0 20px;color:var(--muted);font-size:.95rem;max-width:64ch}
+details b{color:var(--paper)}
+
+footer{border-top:1px solid var(--line);padding-block:38px 100px}
+.foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:flex-end}
+.foot p{margin:0;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted-2);line-height:1.9}
+.foot b{color:var(--paper);font-weight:500}
+.foot a{color:var(--gold);text-decoration:none}
+
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(16,6,23,.94);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line-2);
+  padding:11px var(--gut) calc(11px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  transform:translateY(110%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.sticky.show{transform:translateY(0)}
+.sticky p{margin:0;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted-2);line-height:1.4}
+.sticky p b{display:block;color:var(--paper);font-weight:500}
+.sticky .btn{padding:12px 22px;font-size:15px;flex:none}
+
+.rise{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
+.rise.in{opacity:1;transform:none}
+.hero-inner > *{opacity:0;animation:enter .9s cubic-bezier(.16,1,.3,1) forwards}
+.hero-inner > *:nth-child(1){animation-delay:.06s}
+.hero-inner > *:nth-child(2){animation-delay:.18s}
+.hero-inner > *:nth-child(3){animation-delay:.30s}
+.hero-inner > *:nth-child(4){animation-delay:.42s}
+.hero-inner > *:nth-child(5){animation-delay:.52s}
+@keyframes enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rise{opacity:1;transform:none}.hero-inner > *{opacity:1;animation:none}}
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<header class="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-veil" aria-hidden="true"></div>
+  <div class="hero-top">
+    <span class="mark"><i class="dot" aria-hidden="true"></i> BMS · IIMK KOCHI</span>
+    <span class="right" data-cfg="deadlineShort">Registration closes soon</span>
+  </div>
+
+  <div class="wrap hero-inner">
+    <p class="eyebrow"><b>Freshers</b> · Bachelor of Management Studies</p>
+    <h1>Sequel<span class="yr">26</span></h1>
+    <p class="sub">IIM Kozhikode — Kochi Campus</p>
+
+    <dl class="facts">
+      <div><dt>Date</dt><dd data-cfg="eventDate">Sun 6 September</dd></div>
+      <div><dt>Time</dt><dd data-cfg="eventTime">6:00 PM</dd></div>
+      <div><dt>Venue</dt><dd data-cfg="venue">Kochi Campus</dd></div>
+      <div><dt>Pass</dt><dd class="gold" id="factPrice">₹800</dd></div>
+    </dl>
+
+    <div class="hero-cta">
+      <a class="btn" href="#register">Get your pass</a>
+      <a class="btn ghost" href="#retrieve">Check my status</a>
+    </div>
+  </div>
+</header>
+
+<noscript>
+  <div class="wrap" style="padding-top:28px">
+    <div class="notice warn"><b>This page needs JavaScript.</b>
+      <p>Turn it on and reload, or message the organisers to be added manually.</p></div>
+  </div>
+</noscript>
+
+<!-- ===== WHAT ===== -->
+<section class="alt pad">
+  <div class="wrap two">
+    <div class="rise">
+      <p class="eyebrow">The night</p>
+      <h2 class="h2">One batch hosting<i>.</i><br>One batch arriving<i>.</i></h2>
+      <p><strong>SEQUEL 26</strong> is the Freshers night for the BMS programme — the second one this campus has ever run, which is where the name comes from.</p>
+      <p><strong>Both batches are invited.</strong> BMS-01 and BMS-02, same night, same room. Register, pay by UPI, and once we've checked the payment your pass appears with your name and a code on it.</p>
+      <p>Passes are per person and non-transferable. Everyone entering needs their own.</p>
+    </div>
+    <div class="rise">
+      <p class="eyebrow" style="margin-top:6px">What the pass covers</p>
+      <ul class="incl" id="includes"></ul>
+      <p class="hint" style="margin-top:14px">Pay by UPI — GPay, PhonePe, Paytm, or any banking app.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== REGISTER ===== -->
+<section class="pad" id="register" style="border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="rise" style="margin-bottom:30px">
+      <p class="eyebrow">Register</p>
+      <h2 class="h2">Get your pass<i>.</i></h2>
+      <p class="lede">Fill this in, pay by UPI, and send us the reference number. A human checks it — usually within a few hours — and then your pass is ready to download.</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="card rise" id="stepDetails">
+      <p class="card-title"><span class="n">01 /</span> Your details</p>
+
+      <div class="field">
+        <span class="field-label">Which batch? <span class="req">*</span></span>
+        <div class="seg" id="batchSeg" role="group" aria-label="Batch">
+          <button type="button" data-v="BMS-01" aria-pressed="false">BMS-01<small>2025–2029</small></button>
+          <button type="button" data-v="BMS-02" aria-pressed="false">BMS-02<small>2026–2030</small></button>
+        </div>
+        <div class="err hidden" id="batchErr"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="name">Full name <span class="req">*</span></label>
+          <input type="text" id="name" autocomplete="name" placeholder="Goes on your pass">
+          <div class="err hidden"></div>
+        </div>
+        <div class="field">
+          <label for="roll">Roll number <span class="req">*</span></label>
+          <input type="text" id="roll" placeholder="Your BMS roll no.">
+          <div class="err hidden"></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="phone">WhatsApp number <span class="req">*</span></label>
+          <input type="tel" id="phone" inputmode="numeric" autocomplete="tel" placeholder="10 digits">
+          <div class="err hidden"></div>
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="req">*</span></label>
+          <input type="email" id="email" autocomplete="email" placeholder="you@iimk.ac.in">
+          <div class="err hidden"></div>
+          <span class="hint">We email you here the moment your payment is verified.</span>
+        </div>
+      </div>
+
+      <div style="position:absolute;left:-9999px" aria-hidden="true">
+        <label for="website">Leave empty</label><input type="text" id="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="total"><span>Amount payable</span><b id="priceLabel">₹800</b></div>
+      <div style="margin-top:20px">
+        <button type="button" class="btn wide" id="toPayBtn">Continue to payment</button>
+      </div>
+      <div class="notice bad hidden" id="detailsError"><b>Couldn't save that.</b><p id="detailsErrorMsg"></p></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="card rise hidden" id="stepPay">
+      <p class="card-title"><span class="n">02 /</span> Pay by UPI</p>
+
+      <div class="payhead">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)">Amount</span>
+        <p class="amt" id="payAmount">₹800</p>
+        <p class="who">for <b id="payName">—</b> · <span id="payBatch">—</span></p>
+      </div>
+
+      <div class="paygrid">
+        <div class="qrwrap">
+          <div class="qrbox">
+            <canvas id="qrCanvas" role="img" aria-label="UPI payment QR code"></canvas>
+            <img id="qrImage" class="hidden" src="images/upi-qr.png" alt="UPI payment QR code">
+          </div>
+          <p class="qrcap">Scan from another phone</p>
+        </div>
+        <div class="payways">
+          <a class="btn wide" id="upiBtn" href="#">Open UPI app &amp; pay</a>
+          <div class="upirow">
+            <code id="upiId">upi@bank</code>
+            <button type="button" class="mini" id="copyUpi">Copy</button>
+          </div>
+          <p class="paynote">The QR and the button both carry the exact amount. If your app asks
+            you to type it, pay <b id="payAmount2">₹800</b> — a different amount can't be verified.</p>
+        </div>
+      </div>
+
+      <div class="confirm">
+        <p class="card-title" style="margin-bottom:16px"><span class="n">03 /</span> Tell us you've paid</p>
+
+        <div class="field">
+          <label for="utr">UPI reference / transaction ID <span class="req">*</span></label>
+          <span class="hint">GPay: tap the payment, it's the 12-digit <b>UPI transaction ID</b>. PhonePe calls it <b>UTR</b>. Paytm shows <b>UPI Ref No</b>.</span>
+          <input type="text" id="utr" inputmode="numeric" autocomplete="off" placeholder="e.g. 418293746512">
+          <div class="err hidden"></div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Payment screenshot <span style="color:var(--muted-2);letter-spacing:0;font-family:var(--body)">— optional, but gets you verified faster</span></span>
+          <label class="drop" for="shot">
+            <span class="ic" id="shotIcon" aria-hidden="true">+</span>
+            <span class="tx"><b id="shotTitle">Add a screenshot</b><span id="shotSub">PNG or JPG, up to 8 MB</span></span>
+            <input type="file" id="shot" accept="image/*">
+          </label>
+        </div>
+
+        <button type="button" class="btn wide" id="submitPayBtn">Submit for verification</button>
+
+        <div class="notice bad hidden" id="payError"><b id="payErrorTitle">Couldn't submit.</b><p id="payErrorMsg"></p>
+          <div class="row"><button type="button" class="mini" id="payRetry">Try again</button>
+            <a class="mini" id="waHelp" href="#" target="_blank" rel="noopener">Message the organisers</a></div>
+        </div>
+        <p class="hint" style="text-align:center">Paid but stuck here? Message the organisers with your reference number — nothing is lost.</p>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="waiting rise hidden" id="stepWait">
+      <p class="big">Sent for<br>verification</p>
+      <p>We're checking your payment against our account. This usually takes a few hours.</p>
+      <p>Your reference</p>
+      <div class="ref" id="waitRef">—</div>
+      <p style="margin-bottom:22px"><b id="waitEmail">We'll email you</b> the moment it's approved. You can also check here any time.</p>
+      <button type="button" class="btn" id="checkNowBtn">Check status now</button>
+      <div class="notice hidden" id="waitNote" style="text-align:left"><b id="waitNoteTitle"></b><p id="waitNoteMsg"></p></div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="passwrap hidden" id="stepPass">
+      <div class="notice good" style="margin:0 0 22px">
+        <b>Verified. You're in.</b>
+        <p>Payment confirmed. Your pass is below — download it now, and you're on the list at the desk.</p>
+      </div>
+      <canvas id="passCanvas" width="1080" height="1500" role="img" aria-label="Your SEQUEL 26 entry pass"></canvas>
+      <div class="dl">
+        <button type="button" class="btn" id="dlPng">Download PNG</button>
+        <button type="button" class="btn ghost" id="dlPdf">Download PDF</button>
+      </div>
+      <div class="after">
+        <h4>Before the night</h4>
+        <ol>
+          <li><strong>Save the pass to your phone.</strong> Screenshot it too — you'll want it offline at the door.</li>
+          <li><strong>Your code is your entry.</strong> We check the name and code against the list.</li>
+          <li><strong>Lost it?</strong> Come back and use "Check my status" to pull it up again.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STATUS ===== -->
+<section class="alt pad" id="retrieve">
+  <div class="wrap">
+    <div class="rise" style="margin-bottom:26px">
+      <p class="eyebrow">Already registered?</p>
+      <h2 class="h2">Check your status<i>.</i></h2>
+      <p class="lede">See whether your payment has been verified, and pull your pass up again if you lost it.</p>
+    </div>
+    <div class="card rise" style="max-width:520px">
+      <div class="field">
+        <label for="findEmail">Email you registered with</label>
+        <input type="email" id="findEmail" autocomplete="email" placeholder="you@iimk.ac.in">
+        <div class="err hidden"></div>
+      </div>
+      <button type="button" class="btn wide" id="findBtn">Check</button>
+      <div class="notice hidden" id="findNote"><b id="findNoteTitle"></b><p id="findNoteMsg"></p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section class="pad" style="border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="rise">
+      <p class="eyebrow">Before you ask</p>
+      <h2 class="h2">Fair questions<i>.</i></h2>
+    </div>
+    <div class="faq-list rise">
+      <details><summary>Why isn't my pass instant?</summary>
+        <p>Because a human checks every payment against our account. It's how we skip a payment gateway and its fees. Expect a few hours, faster during the day.</p></details>
+      <details><summary>Where do I find the reference number?</summary>
+        <p>GPay: tap the payment → <b>UPI transaction ID</b>, 12 digits. PhonePe: transaction details → <b>UTR</b>. Paytm: <b>UPI Ref No</b>. Any of them works.</p></details>
+      <details><summary>I paid the wrong amount.</summary>
+        <p>Message the organisers before submitting. Underpaid, we'll ask for the difference. Overpaid, we'll return it. Don't pay twice.</p></details>
+      <details><summary>Can I pay cash instead?</summary>
+        <p>Ask the organisers. We'd rather have it online so the headcount for food and seating is accurate, but we can add you manually and issue a code.</p></details>
+      <details><summary>Can I bring a friend from another programme?</summary>
+        <p>This one is BMS-01 and BMS-02 only. Passes are per person with your name on them.</p></details>
+      <details><summary>Is a refund possible?</summary>
+        <p>Up to the registration deadline, yes — message the organisers. After that we've already committed the spend on food and setup.</p></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <p><b>SEQUEL 26</b><br>Bachelor of Management Studies<br>IIM Kozhikode — Kochi Campus</p>
+    <p>Registration closes <b data-cfg="deadline">Wednesday 2 September</b><br>
+       Questions → <a id="footWa" href="#" target="_blank" rel="noopener"><b data-cfg="contactName">the organisers</b></a></p>
+  </div>
+</footer>
+
+<div class="sticky" id="sticky">
+  <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">₹800 · Sun 6 September</b></p>
+  <a class="btn" href="#register">Get pass</a>
+</div>
+
+<script src="qr.js"></script>
+<script src="pass.js"></script>
+<script>
+/* =====================================================================
+   CONFIG — the only block you need to edit
+   ===================================================================== */
+const CONFIG = {
+  endpoint: "https://script.google.com/macros/s/AKfycbwLu5ZA85qBd3rBX5ZO3VoRMcYPBISVjdp-BiBF479m2wUdwtIO6K-hjUZ8pTxRdMlY/exec",
+
+  /* Where the money goes. A UPI ID is a public payment address — fine here. */
+  upiId:   "9329641726@upi",
+  upiName: "Mr JEET JHAWAR",
+
+  /* false = QR is generated live from upiId + the current price, and carries a
+             per-person note ("SEQUEL26 <roll>") that makes verifying far easier.
+     true  = show images/upi-qr.png instead, the signed QR from your bank app.
+             That one has Rs 800 baked in, so DO NOT change the price if you use it. */
+  useStaticQR: false,
+
+  eventName:     "SEQUEL 26",
+  eventDate:     "Sun 6 September",
+  eventDateFull: "Sunday 6 September 2026",
+  eventTime:     "6:00 PM",
+  venue:         "IIMK Kochi Campus",
+  deadline:      "Wednesday 2 September",
+  deadlineShort: "Registration closes 2 Sept",
+
+  contactName:     "Jeet",
+  contactWhatsApp: "919329641726",
+
+  fallbackPrice: 800     // shown for a split second until the live price loads
+};
+
+const INCLUDES = [
+  "Entry for one person",
+  "Dinner and drinks",
+  "Live performances from both batches",
+  "Games, prizes and the photo booth",
+  "The afterparty playlist"
+];
+
+/* =====================================================================
+   BUILD
+   ===================================================================== */
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rupees = n => "₹" + Number(n).toLocaleString("en-IN");
+
+$$("[data-cfg]").forEach(el=>{ const v=CONFIG[el.dataset.cfg]; if(v) el.textContent=v; });
+$("#includes").innerHTML = INCLUDES.map(i=>`<li>${esc(i)}</li>`).join("");
+
+const waHref = "https://wa.me/" + CONFIG.contactWhatsApp;
+["footWa","waHelp"].forEach(id=>{ const el=$("#"+id); if(el) el.href = waHref; });
+
+let PRICE = CONFIG.fallbackPrice;
+function paintPrice(){
+  $("#priceLabel").textContent  = rupees(PRICE);
+  $("#factPrice").textContent   = rupees(PRICE);
+  $("#payAmount").textContent   = rupees(PRICE);
+  $("#payAmount2").textContent  = rupees(PRICE);
+  $("#stickyPrice").textContent = rupees(PRICE) + " · " + CONFIG.eventDate;
+}
+paintPrice();
+
+/* =====================================================================
+   SERVER
+   ===================================================================== */
+const connected = () => CONFIG.endpoint.indexOf("PASTE_YOUR") !== 0;
+
+async function api(payload){
+  const res = await fetch(CONFIG.endpoint, {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},   // avoids a CORS preflight
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+if(connected()){
+  api({action:"price"}).then(d=>{ if(d && d.ok){ PRICE = d.price; paintPrice(); } }).catch(()=>{});
+}
+
+/* =====================================================================
+   FORM HELPERS
+   ===================================================================== */
+let batch = "";
+$$("#batchSeg button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    batch = b.dataset.v;
+    $$("#batchSeg button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
+    $("#batchErr").classList.add("hidden");
+  });
+});
+
+function setError(field,msg){
+  if(!field) return;
+  field.classList.add("invalid");
+  const b=$(".err",field); if(b){ b.textContent=msg; b.classList.remove("hidden"); }
+}
+function clearError(field){
+  if(!field) return;
+  field.classList.remove("invalid");
+  const b=$(".err",field); if(b) b.classList.add("hidden");
+}
+$$("input").forEach(el=>el.addEventListener("input",()=>clearError(el.closest(".field"))));
+
+function loading(btn,on,label){
+  btn.disabled = on;
+  btn.innerHTML = on ? '<i class="spin" aria-hidden="true"></i>' + label : label;
+}
+
+function validateDetails(){
+  let first=null;
+  const fail=(el,msg)=>{ const f=el.closest(".field")||el; setError(f,msg); if(!first) first=f; };
+  if(!batch){
+    const b=$("#batchErr"); b.textContent="Pick your batch."; b.classList.remove("hidden");
+    first = $("#batchSeg");
+  }
+  if(!$("#name").value.trim()) fail($("#name"),"We need your name for the pass.");
+  if(!$("#roll").value.trim()) fail($("#roll"),"Roll number, please.");
+  if(!/^\d{10}$/.test($("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"")))
+    fail($("#phone"),"Ten digits, no country code.");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#email").value.trim()))
+    fail($("#email"),"That email doesn't look right.");
+  if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
+  return !first;
+}
+
+const details = () => ({
+  name:  $("#name").value.trim(),
+  roll:  $("#roll").value.trim(),
+  phone: $("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,""),
+  email: $("#email").value.trim().toLowerCase(),
+  batch, website: $("#website").value.trim()
+});
+
+/* =====================================================================
+   STEP 1 -> 2
+   ===================================================================== */
+$("#toPayBtn").addEventListener("click", async ()=>{
+  if(!validateDetails()) return;
+  $("#detailsError").classList.add("hidden");
+
+  if(!connected()){
+    $("#detailsErrorMsg").textContent = "Organiser: paste your Apps Script URL into CONFIG.endpoint in index.html.";
+    $("#detailsError").classList.remove("hidden");
+    return;
+  }
+
+  const btn = $("#toPayBtn");
+  loading(btn, true, "Saving…");
+  try{
+    const d = details();
+    const r = await api({action:"register", ...d});
+    if(r.pass){ showPass(r.pass); return; }          // already verified earlier
+    if(!r.ok){
+      $("#detailsErrorMsg").textContent = r.error || "Try again in a moment.";
+      $("#detailsError").classList.remove("hidden");
+      return;
+    }
+    if(r.price){ PRICE = r.price; paintPrice(); }
+    openPayment(d);
+  }catch(err){
+    $("#detailsErrorMsg").textContent = "Couldn't reach the server. Check your connection and try again.";
+    $("#detailsError").classList.remove("hidden");
+  }finally{
+    loading(btn, false, "Continue to payment");
+  }
+});
+
+/* =====================================================================
+   STEP 2 : payment
+   ===================================================================== */
+function openPayment(d){
+  $("#payName").textContent  = d.name;
+  $("#payBatch").textContent = d.batch;
+  $("#upiId").textContent    = CONFIG.upiId;
+
+  const uri = upiURI(CONFIG.upiId, CONFIG.upiName, PRICE, "SEQUEL26 " + d.roll);
+  $("#upiBtn").href = uri;
+  $("#upiBtn").textContent = "Open UPI app & pay " + rupees(PRICE);
+
+  if(CONFIG.useStaticQR){
+    $("#qrCanvas").classList.add("hidden");
+    $("#qrImage").classList.remove("hidden");
+  }else{
+    try{
+      drawQR($("#qrCanvas"), uri, {size:420, dark:"#100617", light:"#F7F0E6", quiet:3});
+    }catch(e){
+      document.querySelector(".qrwrap").classList.add("hidden");  // link + UPI ID still work
+    }
+  }
+
+  $("#stepDetails").classList.add("hidden");
+  $("#stepPay").classList.remove("hidden");
+  $("#stepPay").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("#copyUpi").addEventListener("click", async ()=>{
+  try{
+    await navigator.clipboard.writeText(CONFIG.upiId);
+    $("#copyUpi").textContent = "Copied";
+    setTimeout(()=>{ $("#copyUpi").textContent = "Copy"; }, 2000);
+  }catch{ $("#copyUpi").textContent = "Select it manually"; }
+});
+
+/* screenshot — shrunk in the browser so the upload stays small */
+let shotData = null;
+$("#shot").addEventListener("change", async e=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(file.size > 8*1024*1024){ $("#shotSub").textContent = "Over 8 MB — pick a smaller one."; return; }
+  $("#shotTitle").textContent = "Preparing…";
+  try{
+    shotData = await shrinkImage(file);
+    const old = $("#shotIcon");
+    const img = document.createElement("img");
+    img.className = "ic"; img.id = "shotIcon"; img.alt = ""; img.src = shotData.url;
+    old.replaceWith(img);
+    $("#shotTitle").textContent = "Screenshot attached";
+    $("#shotSub").textContent = file.name;
+  }catch(err){
+    shotData = null;
+    $("#shotTitle").textContent = "Add a screenshot";
+    $("#shotSub").textContent = "Couldn't read that image — try another.";
+  }
+});
+
+function shrinkImage(file){
+  return new Promise((resolve,reject)=>{
+    const img = new Image(), fr = new FileReader();
+    fr.onerror = reject;
+    fr.onload  = () => { img.src = fr.result; };
+    img.onerror = reject;
+    img.onload = () => {
+      const max = 1000, s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      const url = c.toDataURL("image/jpeg", 0.72);
+      resolve({ url, b64: url.split(",")[1], mime:"image/jpeg" });
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* =====================================================================
+   STEP 2 -> 3
+   ===================================================================== */
+$("#submitPayBtn").addEventListener("click", submitPayment);
+$("#payRetry").addEventListener("click", submitPayment);
+
+async function submitPayment(){
+  const utr = $("#utr").value.trim();
+  clearError($("#utr").closest(".field"));
+  if(!/^[A-Za-z0-9]{6,25}$/.test(utr)){
+    setError($("#utr").closest(".field"), "Usually 12 digits. Copy it from your UPI app.");
+    return;
+  }
+
+  const btn = $("#submitPayBtn");
+  loading(btn, true, "Submitting…");
+  $("#payError").classList.add("hidden");
+  try{
+    const r = await api({
+      action:"submitPayment",
+      email: details().email,
+      utr,
+      shot:     shotData ? shotData.b64  : "",
+      shotMime: shotData ? shotData.mime : ""
+    });
+    if(!r.ok){
+      $("#payErrorTitle").textContent = "Couldn't submit";
+      $("#payErrorMsg").textContent = r.error || "Try again in a moment.";
+      $("#payError").classList.remove("hidden");
+      return;
+    }
+    $("#waitRef").textContent = utr;
+    $("#waitEmail").textContent = "We'll email " + details().email;
+    $("#stepPay").classList.add("hidden");
+    $("#stepWait").classList.remove("hidden");
+    $("#sticky").classList.remove("show");
+    $("#stepWait").scrollIntoView({behavior:"smooth", block:"center"});
+  }catch(err){
+    $("#payErrorTitle").textContent = "Network problem";
+    $("#payErrorMsg").textContent = "Couldn't reach the server. Your payment is fine — retry, or send the reference to the organisers.";
+    $("#payError").classList.remove("hidden");
+  }finally{
+    loading(btn, false, "Submit for verification");
+  }
+}
+
+/* =====================================================================
+   STATUS
+   ===================================================================== */
+$("#checkNowBtn").addEventListener("click", async ()=>{
+  const btn = $("#checkNowBtn");
+  loading(btn, true, "Checking…");
+  try{
+    const r = await api({action:"getPass", email: details().email});
+    if(r.ok && r.pass){ showPass(r.pass); return; }
+    note("#waitNote","#waitNoteTitle","#waitNoteMsg","warn",
+         r.title || "Not verified yet",
+         r.error || "Still with the organisers. We'll email you as soon as it's done.");
+  }catch(err){
+    note("#waitNote","#waitNoteTitle","#waitNoteMsg","bad","Couldn't check","Server didn't respond. Try again shortly.");
+  }finally{
+    loading(btn, false, "Check status now");
+  }
+});
+
+$("#findBtn").addEventListener("click", async ()=>{
+  const em = $("#findEmail").value.trim().toLowerCase();
+  $("#findNote").classList.add("hidden");
+  clearError($("#findEmail").closest(".field"));
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){
+    setError($("#findEmail").closest(".field"), "Enter the email you registered with.");
+    return;
+  }
+  if(!connected()){
+    note("#findNote","#findNoteTitle","#findNoteMsg","bad","Not connected","The organiser hasn't finished setting this up yet.");
+    return;
+  }
+  const btn = $("#findBtn");
+  loading(btn, true, "Checking…");
+  try{
+    const r = await api({action:"getPass", email: em});
+    if(r.ok && r.pass){
+      $("#register").scrollIntoView({behavior:"smooth", block:"start"});
+      showPass(r.pass);
+    }else{
+      note("#findNote","#findNoteTitle","#findNoteMsg","warn",
+           r.title || "Not ready yet", r.error || "No registration found for that email.");
+    }
+  }catch(err){
+    note("#findNote","#findNoteTitle","#findNoteMsg","bad","Couldn't check","Server didn't respond. Try again shortly.");
+  }finally{
+    loading(btn, false, "Check");
+  }
+});
+
+function note(box,titleSel,msgSel,kind,title,msg){
+  const n = $(box);
+  n.className = "notice " + kind + (box === "#waitNote" ? "" : "");
+  if(box === "#waitNote") n.style.textAlign = "left";
+  $(titleSel).textContent = title;
+  $(msgSel).textContent = msg;
+  n.classList.remove("hidden");
+}
+
+/* =====================================================================
+   PASS
+   ===================================================================== */
+let currentPass = null;
+
+async function showPass(p){
+  currentPass = {
+    name: p.name, code: p.code, batch: p.batch, roll: p.roll,
+    event: "Freshers — IIM Kozhikode, Kochi Campus",
+    date:  CONFIG.eventDateFull,
+    venue: CONFIG.venue,
+    amount: rupees(p.amount)
+  };
+  ["stepDetails","stepPay","stepWait"].forEach(id=>$("#"+id).classList.add("hidden"));
+  $("#stepPass").classList.remove("hidden");
+  $("#sticky").classList.remove("show");
+
+  await ensureFonts();
+  drawPass($("#passCanvas").getContext("2d"), currentPass);
+  $("#stepPass").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+$("#dlPng").addEventListener("click", async ()=>{
+  if(!currentPass) return;
+  const b=$("#dlPng"); loading(b,true,"Saving…");
+  try{ await downloadPassPNG(currentPass); } finally { loading(b,false,"Download PNG"); }
+});
+$("#dlPdf").addEventListener("click", async ()=>{
+  if(!currentPass) return;
+  const b=$("#dlPdf"); loading(b,true,"Saving…");
+  try{ await downloadPassPDF(currentPass); } finally { loading(b,false,"Download PDF"); }
+});
+
+/* =====================================================================
+   SCROLL
+   ===================================================================== */
+if("IntersectionObserver" in window){
+  const io = new IntersectionObserver(es=>{
+    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
+  },{threshold:.12, rootMargin:"0px 0px -8% 0px"});
+  $$(".rise").forEach(el=>io.observe(el));
+
+  const sticky = $("#sticky");
+  let heroVisible = true, regVisible = false;
+  const gate = new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.target.tagName === "HEADER") heroVisible = e.isIntersecting;
+      if(e.target.id === "register")    regVisible  = e.isIntersecting;
+    });
+    const finished = !$("#stepPass").classList.contains("hidden");
+    sticky.classList.toggle("show", !heroVisible && !regVisible && !finished);
+  },{threshold:.02});
+  gate.observe($("header"));
+  gate.observe($("#register"));
+}else{
+  $$(".rise").forEach(el=>el.classList.add("in"));
+}
+</script>
+</body>
+</html>

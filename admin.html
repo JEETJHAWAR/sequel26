@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SEQUEL 26 — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#100617">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23100617'/%3E%3Ctext x='16' y='23' font-family='Arial' font-weight='900' font-size='16' fill='%23FFC24B' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+
+<style>
+body{font-size:16px}
+.wrap{max-width:1340px}
+.bar{position:sticky;top:0;z-index:30;background:rgba(16,6,23,.94);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);padding:14px var(--gut);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.bar h1{font-family:var(--disp);text-transform:uppercase;font-weight:900;font-size:1.5rem;
+  margin:0;letter-spacing:.01em;display:flex;align-items:center;gap:11px}
+.bar h1 b{color:var(--gold)}
+.bar .tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+
+/* login */
+.gate{min-height:100svh;display:grid;place-items:center;padding:var(--gut)}
+.gate .card{width:100%;max-width:400px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--panel);padding:32px}
+.gate h2{font-family:var(--disp);text-transform:uppercase;font-weight:900;font-size:2.4rem;
+  line-height:.9;margin:0 0 6px}
+.gate h2 b{color:var(--gold)}
+.gate p.sub{margin:0 0 24px;color:var(--muted-2);font-size:.9rem}
+
+/* stats */
+.stats{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:22px}
+@media(min-width:760px){.stats{grid-template-columns:repeat(5,1fr)}}
+.stat{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:16px 18px}
+.stat dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted-2);margin:0 0 6px}
+.stat dd{margin:0;font-family:var(--disp);font-weight:900;font-size:2.1rem;line-height:1;color:var(--paper)}
+.stat dd.gold{color:var(--gold)} .stat dd.ok{color:var(--ok)}
+.stat small{display:block;font-family:var(--body);font-size:11.5px;color:var(--muted-2);margin-top:5px}
+
+/* controls */
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.controls input[type=text]{max-width:320px}
+.filters{display:flex;gap:7px;flex-wrap:wrap}
+
+/* table */
+.tablewrap{border:1px solid var(--line);border-radius:var(--r);overflow:auto;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:1080px}
+thead th{position:sticky;top:0;background:var(--panel-2);text-align:left;
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);font-weight:400;padding:13px 14px;white-space:nowrap;
+  border-bottom:1px solid var(--line-2);z-index:2}
+tbody td{padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:hover{background:rgba(255,255,255,.028)}
+tbody tr:last-child td{border-bottom:0}
+td.nm{font-weight:600;white-space:nowrap}
+td.mono{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+td.code{font-family:var(--mono);font-size:13.5px;color:var(--gold);white-space:nowrap}
+/* keep the action buttons reachable however wide the table gets */
+td.act{white-space:nowrap;position:sticky;right:0;background:var(--panel);
+  box-shadow:-10px 0 14px -10px rgba(0,0,0,.75)}
+thead th:last-child{position:sticky;right:0;background:var(--panel-2);z-index:3;
+  box-shadow:-10px 0 14px -10px rgba(0,0,0,.75)}
+tbody tr:hover td.act{background:#261334}
+td.act button{margin-right:6px}
+.empty{padding:56px 24px;text-align:center;color:var(--muted-2)}
+
+.foot-note{margin-top:16px;font-size:.85rem;color:var(--muted-2);line-height:1.6}
+.foot-note code{font-family:var(--mono);background:rgba(0,0,0,.35);padding:2px 7px;border-radius:5px;font-size:.9em}
+
+dialog{border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel);
+  color:var(--paper);padding:28px;max-width:400px;width:calc(100% - 40px)}
+dialog::backdrop{background:rgba(5,2,9,.72)}
+.mini.ok-btn{background:var(--ok-dim);box-shadow:inset 0 0 0 1px rgba(74,222,128,.5);color:#9CF0BC}
+.mini.ok-btn:hover{box-shadow:inset 0 0 0 1px var(--ok)}
+dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-size:1.7rem;margin:0 0 14px}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="gate" id="gate">
+  <div class="card">
+    <h2>Sequel <b>26</b></h2>
+    <p class="sub">Organiser access</p>
+    <div class="field">
+      <label for="pw">Password</label>
+      <input type="password" id="pw" autocomplete="current-password" placeholder="••••••••">
+      <div class="err hidden"></div>
+    </div>
+    <button type="button" class="btn wide" id="loginBtn">Sign in</button>
+    <p class="hint" style="text-align:center;margin-top:14px">
+      Checked on the server. Nothing is stored in this browser — refreshing signs you out.
+    </p>
+  </div>
+</div>
+
+<!-- ===== PANEL ===== -->
+<div class="hidden" id="panel">
+  <div class="bar">
+    <h1>Sequel <b>26</b> <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--muted-2)">ADMIN</span></h1>
+    <div class="tools">
+      <button type="button" class="mini" id="priceBtn">Ticket price</button>
+      <button type="button" class="mini" id="csvBtn">Export CSV</button>
+      <button type="button" class="mini" id="refreshBtn">Refresh</button>
+      <button type="button" class="mini" id="outBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="wrap" style="padding-block:26px 60px">
+
+    <dl class="stats" id="stats"></dl>
+
+    <div class="controls">
+      <input type="text" id="q" placeholder="Search name, roll, code, phone or email…" autocomplete="off">
+      <div class="filters" id="filters">
+        <button type="button" class="mini on" data-f="verify">To verify</button>
+        <button type="button" class="mini" data-f="all">All</button>
+        <button type="button" class="mini" data-f="paid">Paid</button>
+        <button type="button" class="mini" data-f="unpaid">No payment</button>
+        <button type="button" class="mini" data-f="rejected">Rejected</button>
+        <button type="button" class="mini" data-f="notin">Not in yet</button>
+      </div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Batch</th><th>Roll</th><th>WhatsApp</th><th>Email</th>
+          <th>Status</th><th>UPI ref</th><th>Proof</th><th>Code</th><th>Amount</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty hidden" id="empty">Nothing here yet.</div>
+    </div>
+
+    <p class="foot-note">
+      <b>To verify a payment:</b> open your UPI or bank app, find the transaction with that
+      reference number, check the amount matches, then hit <code>Approve</code>. The pass code is
+      issued and the student is emailed automatically. <code>Reject</code> emails them too, with your reason.<br>
+      <b>On the night:</b> switch to <code>Paid</code>, search a name or pass code, hit <code>Check in</code>.
+    </p>
+  </div>
+</div>
+
+<dialog id="priceDlg">
+  <h3>Ticket price</h3>
+  <div class="field">
+    <label for="newPrice">Amount in rupees</label>
+    <input type="number" id="newPrice" min="1" max="100000" step="1">
+    <div class="err hidden"></div>
+  </div>
+  <p class="hint" style="margin-bottom:18px">
+    Applies to everyone who registers from now on. Passes already issued keep the amount they paid.
+  </p>
+  <div style="display:flex;gap:10px">
+    <button type="button" class="btn" id="savePrice">Save</button>
+    <button type="button" class="btn ghost" id="cancelPrice">Cancel</button>
+  </div>
+</dialog>
+
+<script>
+/* =====================================================================
+   CONFIG — paste the same Apps Script URL you used in index.html
+   ===================================================================== */
+const CONFIG = {
+  endpoint: "https://script.google.com/macros/s/AKfycbwLu5ZA85qBd3rBX5ZO3VoRMcYPBISVjdp-BiBF479m2wUdwtIO6K-hjUZ8pTxRdMlY/exec"
+};
+
+const $  = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const esc = s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const rupees = n => "₹" + Number(n||0).toLocaleString("en-IN");
+
+/* The password lives in memory only — never in localStorage, never in the URL. */
+let PW = "";
+let ROWS = [];
+let PRICE = 0;
+let filter = "verify";
+const ST = { STARTED:"Awaiting payment", CLAIMED:"Verifying", PAID:"Paid", REJECTED:"Rejected" };
+
+async function api(payload){
+  const res = await fetch(CONFIG.endpoint, {
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({...payload, password: PW})
+  });
+  return res.json();
+}
+
+/* ---------- login ---------- */
+$("#pw").addEventListener("keydown", e=>{ if(e.key==="Enter") login(); });
+$("#loginBtn").addEventListener("click", login);
+
+function gateError(msg){
+  const f = $("#pw").closest(".field");
+  f.classList.add("invalid");
+  const b = $(".err", f); b.textContent = msg; b.classList.remove("hidden");
+}
+
+async function login(){
+  const v = $("#pw").value;
+  if(!v) return gateError("Enter the password.");
+  if(CONFIG.endpoint.indexOf("PASTE_YOUR") === 0)
+    return gateError("Not connected — paste the Apps Script URL into admin.html.");
+
+  const b = $("#loginBtn");
+  b.disabled = true; b.innerHTML = '<i class="spin"></i>Checking…';
+  PW = v;
+  try{
+    const r = await api({action:"adminLogin"});
+    if(r.ok){
+      $("#gate").classList.add("hidden");
+      $("#panel").classList.remove("hidden");
+      $("#pw").value = "";
+      await load();
+    }else{ PW=""; gateError(r.error || "Wrong password."); }
+  }catch(err){ PW=""; gateError("Couldn't reach the server."); }
+  finally{ b.disabled=false; b.textContent="Sign in"; }
+}
+
+$("#outBtn").addEventListener("click", ()=>{
+  PW=""; ROWS=[];
+  $("#panel").classList.add("hidden");
+  $("#gate").classList.remove("hidden");
+});
+
+/* ---------- load ---------- */
+$("#refreshBtn").addEventListener("click", load);
+
+async function load(){
+  const b = $("#refreshBtn");
+  b.disabled = true; b.innerHTML = '<i class="spin"></i>Loading…';
+  try{
+    const r = await api({action:"adminList"});
+    if(!r.ok) throw new Error(r.error || "Failed");
+    ROWS = r.rows || []; PRICE = r.price || 0;
+    render();
+  }catch(err){
+    $("#empty").textContent = "Couldn't load: " + err.message;
+    $("#empty").classList.remove("hidden");
+  }finally{ b.disabled=false; b.textContent="Refresh"; }
+}
+
+/* ---------- render ---------- */
+function stats(){
+  const paid   = ROWS.filter(r=>r.status===ST.PAID);
+  const verify = ROWS.filter(r=>r.status===ST.CLAIMED);
+  const nopay  = ROWS.filter(r=>r.status===ST.STARTED);
+  const inn    = paid.filter(r=>r.checkedIn);
+  const b1     = paid.filter(r=>r.batch==="BMS-01").length;
+  const b2     = paid.filter(r=>r.batch==="BMS-02").length;
+  const rev    = paid.reduce((s,r)=>s+Number(r.amount||0),0);
+
+  $("#stats").innerHTML = `
+    <div class="stat"><dt>To verify</dt><dd class="${verify.length?"gold":""}">${verify.length}</dd><small>waiting on you</small></div>
+    <div class="stat"><dt>Paid</dt><dd class="ok">${paid.length}</dd><small>${b1} BMS-01 · ${b2} BMS-02</small></div>
+    <div class="stat"><dt>Collected</dt><dd class="gold">${rupees(rev)}</dd><small>at ${rupees(PRICE)} each</small></div>
+    <div class="stat"><dt>No payment</dt><dd>${nopay.length}</dd><small>started, never paid</small></div>
+    <div class="stat"><dt>Checked in</dt><dd>${inn.length}</dd><small>of ${paid.length} expected</small></div>`;
+}
+
+function visible(){
+  const q = $("#q").value.trim().toLowerCase();
+  return ROWS.filter(r=>{
+    if(filter==="verify"   && r.status!==ST.CLAIMED) return false;
+    if(filter==="paid"     && r.status!==ST.PAID) return false;
+    if(filter==="unpaid"   && r.status!==ST.STARTED) return false;
+    if(filter==="rejected" && r.status!==ST.REJECTED) return false;
+    if(filter==="notin"    && (r.checkedIn || r.status!==ST.PAID)) return false;
+    if(!q) return true;
+    return [r.name,r.roll,r.code,r.phone,r.email,r.utr].join(" ").toLowerCase().includes(q);
+  });
+}
+
+function pillFor(st){
+  if(st===ST.PAID)     return '<span class="pill paid">Paid</span>';
+  if(st===ST.CLAIMED)  return '<span class="pill pending">Verify</span>';
+  if(st===ST.REJECTED) return '<span class="pill failed">Rejected</span>';
+  return '<span class="pill">No payment</span>';
+}
+
+function render(){
+  stats();
+  const list = visible();
+  $("#empty").classList.toggle("hidden", list.length>0);
+  if(!list.length){
+    $("#rows").innerHTML = "";
+    $("#empty").textContent = filter==="verify" ? "Nothing waiting. All caught up." : "No matches.";
+    return;
+  }
+
+  $("#rows").innerHTML = list.map(r=>{
+    const proof = r.shot ? `<a class="mini" href="${esc(r.shot)}" target="_blank" rel="noopener">View</a>` : "—";
+    let actions = "";
+    if(r.status===ST.CLAIMED){
+      actions = `<button type="button" class="mini ok-btn" data-row="${r.row}" data-do="approve">Approve</button>`
+              + `<button type="button" class="mini" data-row="${r.row}" data-do="reject">Reject</button>`;
+    }else if(r.status===ST.PAID){
+      actions = `<button type="button" class="mini${r.checkedIn?" on":""}" data-row="${r.row}" data-do="checkedIn">${r.checkedIn?"Undo":"Check in"}</button>`;
+    }else{
+      actions = `<button type="button" class="mini" data-row="${r.row}" data-do="approve">Mark paid</button>`;
+    }
+    return `<tr>
+      <td class="nm">${esc(r.name)} ${r.checkedIn?'<span class="pill in">In</span>':""}</td>
+      <td class="mono">${esc(r.batch)}</td>
+      <td class="mono">${esc(r.roll)}</td>
+      <td class="mono">${esc(r.phone)}</td>
+      <td class="mono">${esc(r.email)}</td>
+      <td>${pillFor(r.status)}</td>
+      <td class="mono">${esc(r.utr) || "—"}</td>
+      <td>${proof}</td>
+      <td class="code">${esc(r.code) || "—"}</td>
+      <td class="mono">${r.amount ? rupees(r.amount) : "—"}</td>
+      <td class="act">${actions}</td></tr>`;
+  }).join("");
+}
+
+$("#q").addEventListener("input", render);
+$$("#filters button").forEach(b=>b.addEventListener("click", ()=>{
+  filter = b.dataset.f;
+  $$("#filters button").forEach(x=>x.classList.toggle("on", x===b));
+  render();
+}));
+
+/* ---------- row actions ---------- */
+$("#rows").addEventListener("click", async e=>{
+  const btn = e.target.closest("button[data-do]");
+  if(!btn) return;
+  const what = btn.dataset.do;
+  const row  = Number(btn.dataset.row);
+  const rec  = ROWS.find(r=>r.row===row) || {};
+  let payload;
+
+  if(what === "approve"){
+    const msg = rec.status===ST.CLAIMED
+      ? `Approve this payment?\n\n${rec.name}\nUPI ref: ${rec.utr}\nAmount: ${rupees(rec.amount)}\n\nCheck it in your bank app first. This issues a pass code and emails them.`
+      : `No UPI reference on file for ${rec.name}.\n\nOnly do this for cash or a payment you took another way. It issues a pass code and emails them.`;
+    if(!confirm(msg)) return;
+    payload = {action:"adminDecide", row, decision:"approve",
+               method: rec.status===ST.CLAIMED ? "" : "Paid outside UPI"};
+  }else if(what === "reject"){
+    const reason = prompt("Reject this payment. What should we tell them?",
+                          "We couldn't find a payment with that reference number.");
+    if(reason === null) return;
+    payload = {action:"adminDecide", row, decision:"reject", reason};
+  }else{
+    payload = {action:"adminUpdate", row, field:"checkedIn"};
+  }
+
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.innerHTML = '<i class="spin"></i>';
+  try{
+    const r = await api(payload);
+    if(!r.ok) alert(r.error || "Failed");
+    await load();
+  }catch(err){
+    alert("Couldn't reach the server.");
+    btn.disabled = false; btn.textContent = was;
+  }
+});
+
+/* ---------- price ---------- */
+$("#priceBtn").addEventListener("click", ()=>{
+  $("#newPrice").value = PRICE;
+  $(".err", $("#newPrice").closest(".field")).classList.add("hidden");
+  $("#priceDlg").showModal();
+});
+$("#cancelPrice").addEventListener("click", ()=>$("#priceDlg").close());
+$("#savePrice").addEventListener("click", async ()=>{
+  const p = parseInt($("#newPrice").value, 10);
+  const f = $("#newPrice").closest(".field");
+  if(!p || p < 1){
+    f.classList.add("invalid");
+    const b=$(".err",f); b.textContent="Enter a valid amount."; b.classList.remove("hidden");
+    return;
+  }
+  const btn = $("#savePrice");
+  btn.disabled = true; btn.innerHTML = '<i class="spin"></i>Saving…';
+  try{
+    const r = await api({action:"adminSetPrice", price:p});
+    if(r.ok){ PRICE=r.price; $("#priceDlg").close(); render(); }
+    else{
+      f.classList.add("invalid");
+      const b=$(".err",f); b.textContent=r.error||"Failed."; b.classList.remove("hidden");
+    }
+  }finally{ btn.disabled=false; btn.textContent="Save"; }
+});
+
+/* ---------- CSV ---------- */
+$("#csvBtn").addEventListener("click", ()=>{
+  const cols = ["name","batch","roll","phone","email","status","utr","code","amount","verifiedAt","checkedIn","created","notes"];
+  const head = ["Name","Batch","Roll no","WhatsApp","Email","Status","UPI ref","Pass code","Amount","Verified","Checked in","Registered","Notes"];
+  const cell = v => {
+    const s = String(v == null ? "" : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  };
+  const csv = [head.join(",")].concat(
+    visible().map(r => cols.map(c => cell(r[c])).join(","))
+  ).join("\r\n");
+
+  const blob = new Blob(["\uFEFF" + csv], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "sequel26-registrations-" + new Date().toISOString().slice(0,10) + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+});
+</script>
+</body>
+</html>
