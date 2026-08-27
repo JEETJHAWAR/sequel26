@@ -203,7 +203,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
       <div><dt>Date</dt><dd data-cfg="eventDate">TBC</dd></div>
       <div><dt>Time</dt><dd data-cfg="eventTime">TBC</dd></div>
       <div><dt>Venue</dt><dd data-cfg="venue">TBC</dd></div>
-      <div><dt>Pass</dt><dd class="gold" id="factPrice">₹800</dd></div>
+      <div><dt id="factTier">Pass</dt><dd class="gold" id="factPrice">₹800</dd></div>
     </dl>
 
     <div class="hero-cta">
@@ -245,6 +245,12 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
       <p class="eyebrow">Register</p>
       <h2 class="h2">Get your pass<i>.</i></h2>
       <p class="lede">Fill this in, pay by UPI, and send us the reference number. A human checks it — usually within a few hours — and then your pass is ready to download.</p>
+    </div>
+
+    <!-- PAUSED — replaces step 1 while the organisers have entries switched off -->
+    <div class="notice warn hidden" id="pausedNote" style="max-width:660px;margin:0">
+      <b>Registrations are paused right now.</b>
+      <p id="pausedMsg">Check back in a little while.</p>
     </div>
 
     <!-- STEP 1 -->
@@ -303,7 +309,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
       <p class="card-title"><span class="n">02 /</span> Pay by UPI</p>
 
       <div class="payhead">
-        <span style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)">Amount</span>
+        <span id="payTier" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)">Amount</span>
         <p class="amt" id="payAmount">₹800</p>
         <p class="who">for <b id="payName">—</b> · <span id="payBatch">—</span></p>
       </div>
@@ -438,9 +444,10 @@ const CONFIG = {
 
   /* false = QR is generated live from upiId + the current price, and carries a
              per-person note ("SEQUEL26 <roll>") that makes verifying far easier.
-     true  = show images/upi-qr.png instead, the signed QR from your bank app.
-             That one has Rs 800 baked in, so DO NOT change the price if you use it. */
-  useStaticQR: false,
+     true  = show the bank-signed QR image for the current price tier (TIERS,
+             just below). If the price matches no tier, the live QR is drawn
+             anyway — a signed QR can never appear with the wrong amount. */
+  useStaticQR: true,
 
   eventName:     "SEQUEL 26",
   eventDate:     "TBC",
@@ -454,6 +461,16 @@ const CONFIG = {
   contactWhatsApp: "919329641726",
 
   fallbackPrice: 800     // shown for a split second until the live price loads
+};
+
+/* Price tiers. The admin panel sets the price (Ticket price button); the label
+   and bank-signed QR are looked up here by exact amount. Each QR image has its
+   amount signed into it by the bank, which is why there is one per tier.
+   Keep the labels in sync with TIERS in admin.html. */
+const TIERS = {
+  800:  { label: "Early bird", qr: "images/upi-qr.png" },
+  1000: { label: "Regular",    qr: "images/upi-qr-1000.jpeg" },
+  1200: { label: "Last call",  qr: "images/upi-qr-1200.jpeg" }
 };
 
 const INCLUDES = [
@@ -480,13 +497,29 @@ const waHref = "https://wa.me/" + CONFIG.contactWhatsApp;
 
 let PRICE = CONFIG.fallbackPrice;
 function paintPrice(){
+  const t = TIERS[PRICE];
   $("#priceLabel").textContent  = rupees(PRICE);
   $("#factPrice").textContent   = rupees(PRICE);
   $("#payAmount").textContent   = rupees(PRICE);
   $("#payAmount2").textContent  = rupees(PRICE);
   $("#stickyPrice").textContent = rupees(PRICE) + " · " + CONFIG.eventDate;
+  $("#factTier").textContent    = t ? "Pass · " + t.label : "Pass";
+  $("#payTier").textContent     = t ? "Amount · " + t.label : "Amount";
 }
 paintPrice();
+
+/* Organisers can pause new registrations from the admin panel (e.g. while
+   switching price tiers). Step 1 is swapped for the pause notice; anyone
+   already past it keeps their screen so a payment claim is never stranded. */
+let PAUSED = false;
+function setPaused(on, msg){
+  PAUSED = !!on;
+  if(msg) $("#pausedMsg").textContent = msg;
+  $("#pausedNote").classList.toggle("hidden", !PAUSED);
+  const midFlow = ["stepPay","stepWait","stepPass"]
+    .some(id => !$("#"+id).classList.contains("hidden"));
+  if(!midFlow) $("#stepDetails").classList.toggle("hidden", PAUSED);
+}
 
 /* =====================================================================
    SERVER
@@ -503,7 +536,12 @@ async function api(payload){
 }
 
 if(connected()){
-  api({action:"price"}).then(d=>{ if(d && d.ok){ PRICE = d.price; paintPrice(); } }).catch(()=>{});
+  api({action:"price"}).then(d=>{
+    if(d && d.ok){
+      PRICE = d.price; paintPrice();
+      if(d.paused) setPaused(true, d.pauseMsg);
+    }
+  }).catch(()=>{});
 }
 
 /* =====================================================================
@@ -595,6 +633,11 @@ $("#toPayBtn").addEventListener("click", async ()=>{
     const r = await api({action:"register", ...d});
     if(r.pass){ showPass(r.pass); return; }          // already verified earlier
     if(!r.ok){
+      if(r.paused){                                  // paused after the page loaded
+        setPaused(true, r.error);
+        $("#pausedNote").scrollIntoView({behavior:"smooth", block:"center"});
+        return;
+      }
       $("#detailsErrorMsg").textContent = r.error || "Try again in a moment.";
       $("#detailsError").classList.remove("hidden");
       return;
@@ -621,10 +664,14 @@ function openPayment(d){
   $("#upiBtn").href = uri;
   $("#upiBtn").textContent = "Open UPI app & pay " + rupees(PRICE);
 
-  if(CONFIG.useStaticQR){
+  const tier = TIERS[PRICE];
+  if(CONFIG.useStaticQR && tier && tier.qr){
+    $("#qrImage").src = tier.qr;                     // the signed QR for this tier
     $("#qrCanvas").classList.add("hidden");
     $("#qrImage").classList.remove("hidden");
   }else{
+    $("#qrImage").classList.add("hidden");           // off-tier price: live QR only
+    $("#qrCanvas").classList.remove("hidden");
     try{
       drawQR($("#qrCanvas"), uri, {size:420, dark:"#100617", light:"#F7F0E6", quiet:3});
     }catch(e){

@@ -78,7 +78,7 @@ function doPost(e) {
 
   try {
     switch (body.action) {
-      case 'price':          return json({ ok: true, price: getPrice() });
+      case 'price':          return json({ ok: true, price: getPrice(), paused: isPaused(), pauseMsg: getPauseMessage() });
       case 'register':       return json(actionRegister(body));
       case 'submitPayment':  return json(actionSubmitPayment(body));
       case 'getPass':        return json(actionGetPass(body));
@@ -86,6 +86,7 @@ function doPost(e) {
       case 'adminLogin':     return json(guard(body, function () { return { ok: true }; }));
       case 'adminList':      return json(guard(body, adminList));
       case 'adminSetPrice':  return json(guard(body, adminSetPrice));
+      case 'adminSetPause':  return json(guard(body, adminSetPause));
       case 'adminDecide':    return json(guard(body, adminDecide));
       case 'adminUpdate':    return json(guard(body, adminUpdate));
       case 'adminDelete':    return json(guard(body, adminDelete));
@@ -128,6 +129,16 @@ function actionRegister(b) {
     var sheet = getSheet();
     var row   = findRow(sheet, email);
     var now   = new Date();
+
+    // Paused: an already-approved student still gets their pass back;
+    // everyone else is blocked. Payment submissions are NOT blocked — see
+    // actionSubmitPayment — so a claim from someone mid-flow is never lost.
+    if (isPaused()) {
+      if (row > 0 && readCell(sheet, row, 'status') === S.PAID) {
+        return { ok: true, pass: passFromRow(sheet, row) };
+      }
+      return { ok: false, paused: true, error: getPauseMessage() };
+    }
 
     if (row > 0) {
       var status = readCell(sheet, row, 'status');
@@ -245,7 +256,8 @@ function adminList() {
       rows.push(o);
     }
   }
-  return { ok: true, rows: rows, price: getPrice(), event: EVENT_NAME, statuses: S };
+  return { ok: true, rows: rows, price: getPrice(), event: EVENT_NAME, statuses: S,
+           paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || '') };
 }
 
 function adminSetPrice(b) {
@@ -253,6 +265,17 @@ function adminSetPrice(b) {
   if (!p || p < 1 || p > 100000) return { ok: false, error: 'Price must be between 1 and 100000.' };
   PropertiesService.getScriptProperties().setProperty('TICKET_PRICE', String(p));
   return { ok: true, price: p };
+}
+
+/** Pause or resume new registrations, with the message the site shows while
+    paused. Stored in Script Properties, so it needs no redeploy to flip. */
+function adminSetPause(b) {
+  var on  = (b.paused === true || b.paused === 'true');
+  var msg = String(b.message || '').trim().slice(0, 300);
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('REG_PAUSED', on ? '1' : '');
+  props.setProperty('PAUSE_MESSAGE', msg);
+  return { ok: true, paused: on, pauseMsg: msg };
 }
 
 /** Approve or reject a payment. Approving issues the code and emails them. */
@@ -434,6 +457,13 @@ function prop(k) { return PropertiesService.getScriptProperties().getProperty(k)
 function getPrice() {
   var p = parseInt(prop('TICKET_PRICE'), 10);
   return (p && p > 0) ? p : 800;
+}
+
+function isPaused() { return prop('REG_PAUSED') === '1'; }
+
+function getPauseMessage() {
+  return String(prop('PAUSE_MESSAGE') || '').trim() ||
+         'Registrations are paused for a moment while we update things. Check back shortly.';
 }
 
 function readCell(sheet, row, key) { return sheet.getRange(row, C[key]).getValue(); }

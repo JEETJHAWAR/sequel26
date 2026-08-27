@@ -78,6 +78,12 @@ dialog::backdrop{background:rgba(5,2,9,.72)}
 .mini.del-btn{color:#F0A3A3;box-shadow:inset 0 0 0 1px rgba(240,90,90,.4)}
 .mini.del-btn:hover{box-shadow:inset 0 0 0 1px #F05A5A}
 dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-size:1.7rem;margin:0 0 14px}
+
+/* tier picker inside the price dialog */
+#priceDlg{max-width:460px}
+#tierSeg{margin-bottom:18px}
+#tierSeg button{min-width:0;padding:13px 8px;font-size:1.05rem}
+.mini.pause-on{background:var(--hot-dim);box-shadow:inset 0 0 0 1.5px var(--hot);color:var(--warn)}
 </style>
 </head>
 <body>
@@ -105,6 +111,7 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
     <h1>Sequel <b>26</b> <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--muted-2)">ADMIN</span></h1>
     <div class="tools">
       <button type="button" class="mini" id="priceBtn">Ticket price</button>
+      <button type="button" class="mini" id="pauseBtn">Pause entries</button>
       <button type="button" class="mini" id="csvBtn">Export CSV</button>
       <button type="button" class="mini" id="refreshBtn">Refresh</button>
       <button type="button" class="mini" id="outBtn">Sign out</button>
@@ -112,6 +119,13 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
   </div>
 
   <div class="wrap" style="padding-block:26px 60px">
+
+    <div class="notice warn hidden" id="pausedBanner" style="margin:0 0 20px">
+      <b>Registrations are paused.</b>
+      <p id="pausedBannerMsg"></p>
+      <p style="color:var(--muted-2)">New sign-ups are blocked on the site. Anyone already on the
+      payment step can still submit their reference, and paid students can still open their pass.</p>
+    </div>
 
     <dl class="stats" id="stats"></dl>
 
@@ -148,18 +162,41 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
 </div>
 
 <dialog id="priceDlg">
-  <h3>Ticket price</h3>
+  <h3>Price tier</h3>
+  <div class="seg" id="tierSeg"></div>
   <div class="field">
     <label for="newPrice">Amount in rupees</label>
     <input type="number" id="newPrice" min="1" max="100000" step="1">
     <div class="err hidden"></div>
   </div>
   <p class="hint" style="margin-bottom:18px">
-    Applies to everyone who registers from now on. Passes already issued keep the amount they paid.
+    Applies to everyone who registers from now on — passes already issued keep the amount
+    they paid. Each tier shows its own bank-signed QR on the site; a custom amount falls
+    back to a live-generated QR. Tip: pause entries while you switch, then resume.
   </p>
   <div style="display:flex;gap:10px">
     <button type="button" class="btn" id="savePrice">Save</button>
     <button type="button" class="btn ghost" id="cancelPrice">Cancel</button>
+  </div>
+</dialog>
+
+<dialog id="pauseDlg">
+  <h3 id="pauseTitle">Pause entries</h3>
+  <p class="hint" style="margin:0 0 16px">
+    Blocks new registrations on the site and shows your message instead of the form.
+    People already on the payment step can still submit their reference — a payment
+    claim is never lost — and paid students can still open their pass.
+  </p>
+  <div class="field">
+    <label for="pauseText">Message shown to students</label>
+    <textarea id="pauseText" maxlength="300" rows="3"
+      placeholder="e.g. Early bird is done — the next batch of passes opens at 6 pm."></textarea>
+    <span class="hint">Leave it empty for the default: "Registrations are paused for a moment while we update things. Check back shortly."</span>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button type="button" class="btn" id="pauseGo">Pause entries</button>
+    <button type="button" class="btn ghost hidden" id="pauseSaveMsg">Update message</button>
+    <button type="button" class="btn ghost" id="pauseCancel">Cancel</button>
   </div>
 </dialog>
 
@@ -180,8 +217,22 @@ const rupees = n => "₹" + Number(n||0).toLocaleString("en-IN");
 let PW = "";
 let ROWS = [];
 let PRICE = 0;
+let PAUSED = false;
+let PAUSEMSG = "";
 let filter = "verify";
 const ST = { STARTED:"Awaiting payment", CLAIMED:"Verifying", PAID:"Paid", REJECTED:"Rejected" };
+
+/* Price tiers — keep labels in sync with TIERS in index.html, where each
+   tier also names its bank-signed QR image. */
+const TIERS = [
+  { price: 800,  label: "Early bird" },
+  { price: 1000, label: "Regular"    },
+  { price: 1200, label: "Last call"  }
+];
+const tierLabel = p => {
+  const t = TIERS.find(t => t.price === Number(p));
+  return t ? t.label : "Custom";
+};
 
 async function api(payload){
   const res = await fetch(CONFIG.endpoint, {
@@ -239,6 +290,7 @@ async function load(){
     const r = await api({action:"adminList"});
     if(!r.ok) throw new Error(r.error || "Failed");
     ROWS = r.rows || []; PRICE = r.price || 0;
+    PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
     render();
   }catch(err){
     $("#empty").textContent = "Couldn't load: " + err.message;
@@ -259,7 +311,7 @@ function stats(){
   $("#stats").innerHTML = `
     <div class="stat"><dt>To verify</dt><dd class="${verify.length?"gold":""}">${verify.length}</dd><small>waiting on you</small></div>
     <div class="stat"><dt>Paid</dt><dd class="ok">${paid.length}</dd><small>${b1} BMS-01 · ${b2} BMS-02</small></div>
-    <div class="stat"><dt>Collected</dt><dd class="gold">${rupees(rev)}</dd><small>at ${rupees(PRICE)} each</small></div>
+    <div class="stat"><dt>Collected</dt><dd class="gold">${rupees(rev)}</dd><small>now ${rupees(PRICE)} · ${tierLabel(PRICE)}</small></div>
     <div class="stat"><dt>No payment</dt><dd>${nopay.length}</dd><small>started, never paid</small></div>
     <div class="stat"><dt>Checked in</dt><dd>${inn.length}</dd><small>of ${paid.length} expected</small></div>`;
 }
@@ -284,8 +336,19 @@ function pillFor(st){
   return '<span class="pill">No payment</span>';
 }
 
+function paintControls(){
+  $("#priceBtn").textContent = PRICE ? rupees(PRICE) + " · " + tierLabel(PRICE) : "Ticket price";
+  $("#pauseBtn").textContent = PAUSED ? "Paused — resume" : "Pause entries";
+  $("#pauseBtn").classList.toggle("pause-on", PAUSED);
+  $("#pausedBanner").classList.toggle("hidden", !PAUSED);
+  $("#pausedBannerMsg").textContent = PAUSEMSG
+    ? 'Site message: "' + PAUSEMSG + '"'
+    : "No custom message set — the site shows the default text.";
+}
+
 function render(){
   stats();
+  paintControls();
   const list = visible();
   $("#empty").classList.toggle("hidden", list.length>0);
   if(!list.length){
@@ -370,8 +433,23 @@ $("#rows").addEventListener("click", async e=>{
 });
 
 /* ---------- price ---------- */
+$("#tierSeg").innerHTML = TIERS.map(t =>
+  `<button type="button" data-p="${t.price}" aria-pressed="false">${esc(t.label)}<small>${rupees(t.price)}</small></button>`
+).join("");
+
+function markTier(p){
+  $$("#tierSeg button").forEach(b =>
+    b.setAttribute("aria-pressed", String(Number(b.dataset.p) === Number(p))));
+}
+$$("#tierSeg button").forEach(b => b.addEventListener("click", ()=>{
+  $("#newPrice").value = b.dataset.p;
+  markTier(b.dataset.p);
+}));
+$("#newPrice").addEventListener("input", ()=>markTier($("#newPrice").value));
+
 $("#priceBtn").addEventListener("click", ()=>{
   $("#newPrice").value = PRICE;
+  markTier(PRICE);
   $(".err", $("#newPrice").closest(".field")).classList.add("hidden");
   $("#priceDlg").showModal();
 });
@@ -395,6 +473,31 @@ $("#savePrice").addEventListener("click", async ()=>{
     }
   }finally{ btn.disabled=false; btn.textContent="Save"; }
 });
+
+/* ---------- pause ---------- */
+$("#pauseBtn").addEventListener("click", ()=>{
+  $("#pauseText").value = PAUSEMSG;
+  $("#pauseTitle").textContent = PAUSED ? "Entries are paused" : "Pause entries";
+  $("#pauseGo").textContent    = PAUSED ? "Resume entries"    : "Pause entries";
+  $("#pauseSaveMsg").classList.toggle("hidden", !PAUSED);
+  $("#pauseDlg").showModal();
+});
+$("#pauseCancel").addEventListener("click", ()=>$("#pauseDlg").close());
+
+async function sendPause(btn, on){
+  const was = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<i class="spin"></i>Saving…';
+  try{
+    const r = await api({action:"adminSetPause", paused:on, message: $("#pauseText").value.trim()});
+    if(r.ok){
+      PAUSED = r.paused; PAUSEMSG = r.pauseMsg || "";
+      $("#pauseDlg").close(); render();
+    }else alert(r.error || "Failed");
+  }catch(err){ alert("Couldn't reach the server."); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+}
+$("#pauseGo").addEventListener("click", e=>sendPause(e.target, !PAUSED));
+$("#pauseSaveMsg").addEventListener("click", e=>sendPause(e.target, true));
 
 /* ---------- CSV ---------- */
 $("#csvBtn").addEventListener("click", ()=>{

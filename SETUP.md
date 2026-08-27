@@ -66,7 +66,7 @@ Then in `index.html`, set the rest:
 ```js
 upiId:   "9329641726@upi",         // already filled in from your QR
 upiName: "Mr JEET JHAWAR",
-useStaticQR: false,                // see "Which QR" below
+useStaticQR: true,                 // see "Which QR" below
 
 eventDate:     "Sun 6 September",
 eventDateFull: "Sunday 6 September 2026",   // printed on the pass
@@ -79,23 +79,30 @@ contactWhatsApp: "919XXXXXXXXX",            // country code + number, digits onl
 
 ### Which QR
 
-Your uploaded QR is saved at `images/upi-qr.png`. It is a **signed** QR with
-**Rs 800 baked into it**, so it cannot be re-signed for a different amount.
+Prices are tiered, and each tier has its own **bank-signed** QR (a signed QR has
+its amount baked in and cannot be re-signed for a different amount — hence one
+file per tier):
 
-| | `useStaticQR: false` (default) | `useStaticQR: true` |
+| Tier | Price | Signed QR |
 |---|---|---|
-| QR source | Generated live in the browser | Your `images/upi-qr.png` |
-| Amount | Follows the admin panel | Locked at Rs 800 forever |
-| Payment note | `SEQUEL26 <roll no>` on every payment | Empty |
-| Verified badge | No — a normal person-to-person payment | Yes, bank-signed |
+| Early bird | ₹800 | `images/upi-qr.png` |
+| Regular | ₹1,000 | `images/upi-qr-1000.jpeg` |
+| Last call | ₹1,200 | `images/upi-qr-1200.jpeg` |
 
-**Stay on `false` unless you hit a problem.** The per-person note is the reason: when
-you open your UPI history to verify, each payment says `SEQUEL26 BMS02-047` next to
-it, so you can match rows in seconds instead of guessing from names. And the admin
-price control you asked for only works in this mode.
+You switch tiers from the admin panel (**Ticket price** button). The payment page
+automatically shows the signed QR matching the current price.
 
-Switch to `true` only if the generated QR misbehaves in testing — and if you do,
-leave the price at 800.
+| | `useStaticQR: true` (default) | `useStaticQR: false` |
+|---|---|---|
+| QR source | The signed image for the current tier | Generated live in the browser |
+| Custom amount | Falls back to the live QR automatically | Always live |
+| Payment note | Empty | `SEQUEL26 <roll no>` on every payment |
+| Verified badge | Yes, bank-signed | No — a normal person-to-person payment |
+
+The live QR's per-person note makes verifying faster (each payment in your UPI
+history says `SEQUEL26 BMS/02/047`), but the signed QR is what banks trust most.
+Either mode follows the admin price; the signed image can never show a wrong
+amount because off-tier prices fall back to the live QR.
 
 ---
 
@@ -157,7 +164,8 @@ Do this in batches. Twice a day is plenty.
 
 | Task | How |
 |---|---|
-| Change the price | **Ticket price** button — applies to new registrations only |
+| Change the price tier | **Ticket price** button — pick Early bird ₹800 / Regular ₹1,000 / Last call ₹1,200. Applies to new registrations only; the site's QR switches with it |
+| Pause entries | **Pause entries** button — blocks new sign-ups and shows your message. People mid-payment can still submit their reference. Pause while switching tiers, then resume |
 | Cash at the door | Find them (filter **No payment**) → **Mark paid** |
 | Entry desk | Filter **Paid**, search a name or code → **Check in** |
 | Who hasn't arrived | Filter **Not in yet** |
