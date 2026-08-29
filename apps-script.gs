@@ -567,7 +567,10 @@ function setup() {
   var msg = prop('ADMIN_PASSWORD')
     ? 'Everything is set.\n\nNow: Deploy > New deployment > Web app\nExecute as: Me\nWho has access: Anyone\n\nPaste the /exec URL into index.html and admin.html.'
     : 'Sheet is ready, but ADMIN_PASSWORD is not set yet.\n\nProject Settings > Script Properties > Add script property:\n  ADMIN_PASSWORD = your password\n\nThen deploy.';
-  SpreadsheetApp.getUi().alert(msg);
+  // A popup only works when the spreadsheet UI is open; from the editor or a
+  // trigger there is no UI, and the sheet work above has already succeeded.
+  try { SpreadsheetApp.getUi().alert(msg); }
+  catch (ignore) { Logger.log(msg); }
 }
 
 /** Sanity check — run it, then View > Logs. */
