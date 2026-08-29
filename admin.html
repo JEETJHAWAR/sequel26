@@ -79,10 +79,10 @@ dialog::backdrop{background:rgba(5,2,9,.72)}
 .mini.del-btn:hover{box-shadow:inset 0 0 0 1px #F05A5A}
 dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-size:1.7rem;margin:0 0 14px}
 
-/* tier picker inside the price dialog */
+/* tier / payee pickers inside their dialogs */
 #priceDlg{max-width:460px}
-#tierSeg{margin-bottom:18px}
-#tierSeg button{min-width:0;padding:13px 8px;font-size:1.05rem}
+#tierSeg,#payeeSeg{margin-bottom:18px}
+#tierSeg button,#payeeSeg button{min-width:0;padding:13px 8px;font-size:1.05rem}
 .mini.pause-on{background:var(--hot-dim);box-shadow:inset 0 0 0 1.5px var(--hot);color:var(--warn)}
 </style>
 </head>
@@ -111,6 +111,7 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
     <h1>Sequel <b>26</b> <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--muted-2)">ADMIN</span></h1>
     <div class="tools">
       <button type="button" class="mini" id="priceBtn">Ticket price</button>
+      <button type="button" class="mini" id="payeeBtn">Collecting</button>
       <button type="button" class="mini" id="pauseBtn">Pause entries</button>
       <button type="button" class="mini" id="csvBtn">Export CSV</button>
       <button type="button" class="mini" id="refreshBtn">Refresh</button>
@@ -145,7 +146,7 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
       <table>
         <thead><tr>
           <th>Name</th><th>Batch</th><th>Roll</th><th>WhatsApp</th><th>Email</th>
-          <th>Status</th><th>UPI ref</th><th>Proof</th><th>Code</th><th>Amount</th><th>Actions</th>
+          <th>Status</th><th>UPI ref</th><th>Proof</th><th>Code</th><th>Amount</th><th>Paid to</th><th>Actions</th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table>
@@ -153,8 +154,9 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
     </div>
 
     <p class="foot-note">
-      <b>To verify a payment:</b> open your UPI or bank app, find the transaction with that
-      reference number, check the amount matches, then hit <code>Approve</code>. The pass code is
+      <b>To verify a payment:</b> check the row's <code>Paid to</code> column, open <b>that
+      person's</b> UPI or bank app, find the transaction with that reference number, check
+      the amount matches, then hit <code>Approve</code>. The pass code is
       issued and the student is emailed automatically. <code>Reject</code> emails them too, with your reason.<br>
       <b>On the night:</b> switch to <code>Paid</code>, search a name or pass code, hit <code>Check in</code>.
     </p>
@@ -177,6 +179,21 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
   <div style="display:flex;gap:10px">
     <button type="button" class="btn" id="savePrice">Save</button>
     <button type="button" class="btn ghost" id="cancelPrice">Cancel</button>
+  </div>
+</dialog>
+
+<dialog id="payeeDlg">
+  <h3>Who collects payments</h3>
+  <div class="seg" id="payeeSeg"></div>
+  <p class="hint" style="margin-bottom:18px">
+    The site's QR, UPI ID and pay button all switch to this account for everyone who
+    reaches the payment step from now on. Flip it when one account is nearing its
+    daily UPI receiving limit. Each row records who it paid — verify against
+    that person's account, not whoever is collecting today.
+  </p>
+  <div style="display:flex;gap:10px">
+    <button type="button" class="btn" id="savePayee">Save</button>
+    <button type="button" class="btn ghost" id="cancelPayee">Cancel</button>
   </div>
 </dialog>
 
@@ -232,6 +249,19 @@ const TIERS = [
 const tierLabel = p => {
   const t = TIERS.find(t => t.price === Number(p));
   return t ? t.label : "Custom";
+};
+
+/* Payment collectors — keep ids in sync with PAYEES in index.html (which also
+   holds each one's UPI ID and QR images) and PAYEE_IDS in apps-script.gs.
+   Rows with an empty payee predate the column: they all collected to Jeet. */
+const PAYEES = [
+  { id: "jeet",    label: "Jeet"    },
+  { id: "anshika", label: "Anshika" }
+];
+let PAYEE_ID = "jeet";
+const payeeLabel = id => {
+  const p = PAYEES.find(p => p.id === String(id || "jeet"));
+  return p ? p.label : String(id);
 };
 
 async function api(payload){
@@ -290,6 +320,7 @@ async function load(){
     const r = await api({action:"adminList"});
     if(!r.ok) throw new Error(r.error || "Failed");
     ROWS = r.rows || []; PRICE = r.price || 0;
+    PAYEE_ID = r.payee || "jeet";
     PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
     render();
   }catch(err){
@@ -307,11 +338,16 @@ function stats(){
   const b1     = paid.filter(r=>r.batch==="BMS-01").length;
   const b2     = paid.filter(r=>r.batch==="BMS-02").length;
   const rev    = paid.reduce((s,r)=>s+Number(r.amount||0),0);
+  const perPayee = PAYEES.map(p=>{
+    const sum = paid.filter(r=>String(r.payee||"jeet")===p.id)
+                    .reduce((s,r)=>s+Number(r.amount||0),0);
+    return p.label + " " + rupees(sum);
+  }).join(" · ");
 
   $("#stats").innerHTML = `
     <div class="stat"><dt>To verify</dt><dd class="${verify.length?"gold":""}">${verify.length}</dd><small>waiting on you</small></div>
     <div class="stat"><dt>Paid</dt><dd class="ok">${paid.length}</dd><small>${b1} BMS-01 · ${b2} BMS-02</small></div>
-    <div class="stat"><dt>Collected</dt><dd class="gold">${rupees(rev)}</dd><small>now ${rupees(PRICE)} · ${tierLabel(PRICE)}</small></div>
+    <div class="stat"><dt>Collected</dt><dd class="gold">${rupees(rev)}</dd><small>${perPayee}</small></div>
     <div class="stat"><dt>No payment</dt><dd>${nopay.length}</dd><small>started, never paid</small></div>
     <div class="stat"><dt>Checked in</dt><dd>${inn.length}</dd><small>of ${paid.length} expected</small></div>`;
 }
@@ -338,6 +374,7 @@ function pillFor(st){
 
 function paintControls(){
   $("#priceBtn").textContent = PRICE ? rupees(PRICE) + " · " + tierLabel(PRICE) : "Ticket price";
+  $("#payeeBtn").textContent = "Collecting · " + payeeLabel(PAYEE_ID);
   $("#pauseBtn").textContent = PAUSED ? "Paused — resume" : "Pause entries";
   $("#pauseBtn").classList.toggle("pause-on", PAUSED);
   $("#pausedBanner").classList.toggle("hidden", !PAUSED);
@@ -380,6 +417,7 @@ function render(){
       <td>${proof}</td>
       <td class="code">${esc(r.code) || "—"}</td>
       <td class="mono">${r.amount ? rupees(r.amount) : "—"}</td>
+      <td class="mono">${esc(payeeLabel(r.payee))}</td>
       <td class="act">${actions}</td></tr>`;
   }).join("");
 }
@@ -474,6 +512,35 @@ $("#savePrice").addEventListener("click", async ()=>{
   }finally{ btn.disabled=false; btn.textContent="Save"; }
 });
 
+/* ---------- payee ---------- */
+$("#payeeSeg").innerHTML = PAYEES.map(p =>
+  `<button type="button" data-id="${p.id}" aria-pressed="false">${esc(p.label)}</button>`
+).join("");
+
+let pickedPayee = "jeet";
+function markPayee(id){
+  pickedPayee = id;
+  $$("#payeeSeg button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.id === id)));
+}
+$$("#payeeSeg button").forEach(b => b.addEventListener("click", ()=>markPayee(b.dataset.id)));
+
+$("#payeeBtn").addEventListener("click", ()=>{
+  markPayee(PAYEE_ID);
+  $("#payeeDlg").showModal();
+});
+$("#cancelPayee").addEventListener("click", ()=>$("#payeeDlg").close());
+$("#savePayee").addEventListener("click", async ()=>{
+  const btn = $("#savePayee");
+  btn.disabled = true; btn.innerHTML = '<i class="spin"></i>Saving…';
+  try{
+    const r = await api({action:"adminSetPayee", payee: pickedPayee});
+    if(r.ok){ PAYEE_ID = r.payee; $("#payeeDlg").close(); render(); }
+    else alert(r.error || "Failed");
+  }catch(err){ alert("Couldn't reach the server."); }
+  finally{ btn.disabled=false; btn.textContent="Save"; }
+});
+
 /* ---------- pause ---------- */
 $("#pauseBtn").addEventListener("click", ()=>{
   $("#pauseText").value = PAUSEMSG;
@@ -501,8 +568,8 @@ $("#pauseSaveMsg").addEventListener("click", e=>sendPause(e.target, true));
 
 /* ---------- CSV ---------- */
 $("#csvBtn").addEventListener("click", ()=>{
-  const cols = ["name","batch","roll","phone","email","status","utr","code","amount","verifiedAt","checkedIn","created","notes"];
-  const head = ["Name","Batch","Roll no","WhatsApp","Email","Status","UPI ref","Pass code","Amount","Verified","Checked in","Registered","Notes"];
+  const cols = ["name","batch","roll","phone","email","status","utr","code","amount","payee","verifiedAt","checkedIn","created","notes"];
+  const head = ["Name","Batch","Roll no","WhatsApp","Email","Status","UPI ref","Pass code","Amount","Paid to","Verified","Checked in","Registered","Notes"];
   const cell = v => {
     const s = String(v == null ? "" : v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;

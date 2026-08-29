@@ -18,7 +18,7 @@ Static site on GitHub Pages. **No build step, no npm, no bundler, no payment gat
 | `pass.js` | Draws the pass on canvas; exports PNG and a hand-built PDF. |
 | `apps-script.gs` | The backend. Pasted into Google Apps Script, NOT served by the site. |
 | `fonts/` | Three self-hosted WOFF2 files. No CDN fallback — do not delete. |
-| `images/` | `confetti.jpg` (hero fallback), `cover.jpg` (link preview), signed UPI QRs: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`. |
+| `images/` | `confetti.jpg` (hero fallback), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`. |
 
 ## Status flow
 
@@ -34,9 +34,18 @@ The repo is **public**. The admin password lives in Apps Script Properties
 (`ADMIN_PASSWORD`) and is checked server-side by `guard()`. The ticket price lives
 there too (`TICKET_PRICE`) so the admin panel can change it without a redeploy.
 
-The UPI ID sits in `CONFIG.upiId` in `index.html`. That is intentional — a UPI ID is
-a public payment address. Note it is a phone-number handle (`9329641726@upi`), so
-publishing the site publishes that number.
+Payments can be collected by **two people** — Jeet (`9329641726@upi`) or Anshika
+(`anshika.chauhan258@okhdfcbank`) — so one account never hits its daily UPI
+receiving limit. The active collector lives in Script Properties (`PAYEE`), set by
+`adminSetPayee` from the admin panel's "Collecting" button; the site's QR, UPI ID
+and pay button all follow it. The `PAYEES` map exists in `index.html` (UPI ID +
+name + QR per tier) and `admin.html` (labels), with the id whitelist `PAYEE_IDS`
+in `apps-script.gs`. **Adding a payee means updating all three.** Each sheet row
+records who it paid in the `Paid to` column (empty = Jeet, pre-column rows), set
+at registration and refreshed while the row is still `Awaiting payment` — the
+same rule as the amount. Verification must check the account in that column.
+UPI IDs are public payment addresses — fine in a public repo, but Jeet's is a
+phone-number handle, so publishing the site publishes that number.
 
 Prices are **tiered**: ₹800 "Early bird", ₹1000 "Regular", ₹1200 "Last call". The
 admin panel's price dialog picks a tier (or a custom amount); the number itself
@@ -44,12 +53,13 @@ still lives in `TICKET_PRICE` in Script Properties. The `TIERS` map exists twice
 in `index.html` (label + signed QR image per amount) and `admin.html` (labels).
 **If you change one, change both.**
 
-`CONFIG.useStaticQR` (now `true`) shows the bank-signed QR for the current tier.
-Each image has its amount signed into it by the bank and cannot be edited — that
-is why there is one file per tier. If the price matches no tier (custom amount),
-the site falls back to the live-generated QR, so a signed QR can never appear
-with the wrong amount. Setting it `false` reverts to live QRs everywhere; those
-carry the per-person "SEQUEL26 &lt;roll&gt;" note that makes verification easier.
+`CONFIG.useStaticQR` (now `true`) shows the current payee's fixed-amount QR for
+the current tier. Each image has its amount baked in and cannot be edited — that
+is why there is one file per payee per tier. If the price matches no tier
+(custom amount), the site falls back to the live-generated QR **for the active
+payee's UPI ID**, so a fixed QR can never appear with the wrong amount. Setting
+it `false` reverts to live QRs everywhere; those carry the per-person
+"SEQUEL26 &lt;roll&gt;" note that makes verification easier.
 
 Registrations can be **paused** from the admin panel ("Pause entries", with a
 custom message). State lives in Script Properties (`REG_PAUSED`, `PAUSE_MESSAGE`),
@@ -80,14 +90,18 @@ the UPI reference number is the thing that matters.
 
 ## Where to edit
 
-- **UPI ID, dates, venue, WhatsApp, endpoint** → `CONFIG` at the bottom of `index.html`
+- **Dates, venue, WhatsApp, endpoint** → `CONFIG` at the bottom of `index.html`
+- **UPI IDs / payee QRs** → `PAYEES` in `index.html` (+ labels in `admin.html`,
+  ids in `PAYEE_IDS` in `apps-script.gs`)
 - **What the pass covers** → `INCLUDES` array in `index.html`
 - **Pass design** → `drawPass()` in `pass.js` (canvas is 1080 × 1500)
 - **Email wording** → `emailApproved()` / `emailRejected()` in `apps-script.gs`
 - **Sheet columns** → `COLS` in `apps-script.gs`. Adding one means updating `COLS`,
   the payload in `index.html`, and the admin table in `admin.html`.
 - **Price** → not in code. Script Properties, changed from the admin panel UI.
-- **Tier names / which QR each tier shows** → `TIERS` in `index.html` **and** `admin.html`.
+- **Tier names** → `TIERS` in `index.html` **and** `admin.html`.
+- **Who collects** → not in code. The admin panel's "Collecting" button (Script
+  Properties `PAYEE`).
 
 ## Common asks
 

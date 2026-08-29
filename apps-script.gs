@@ -61,8 +61,14 @@ const COLS = [
   ['Verified',    'verifiedAt'],
   ['Checked in',  'checkedIn'],
   ['Notes',       'notes'],
-  ['Updated',     'updated']
+  ['Updated',     'updated'],
+  ['Paid to',     'payee']     // appended last so existing sheets don't shift
 ];
+
+/** Who can collect payments. Mirrored in PAYEES in index.html and admin.html —
+    if you add someone, add them in all three places. Rows with an empty
+    'Paid to' predate this column: they were all collected by jeet. */
+const PAYEE_IDS = ['jeet', 'anshika'];
 
 const C = {};
 COLS.forEach(function (c, i) { C[c[1]] = i + 1; });
@@ -78,7 +84,7 @@ function doPost(e) {
 
   try {
     switch (body.action) {
-      case 'price':          return json({ ok: true, price: getPrice(), paused: isPaused(), pauseMsg: getPauseMessage() });
+      case 'price':          return json({ ok: true, price: getPrice(), payee: getPayee(), paused: isPaused(), pauseMsg: getPauseMessage() });
       case 'register':       return json(actionRegister(body));
       case 'submitPayment':  return json(actionSubmitPayment(body));
       case 'getPass':        return json(actionGetPass(body));
@@ -87,6 +93,7 @@ function doPost(e) {
       case 'adminList':      return json(guard(body, adminList));
       case 'adminSetPrice':  return json(guard(body, adminSetPrice));
       case 'adminSetPause':  return json(guard(body, adminSetPause));
+      case 'adminSetPayee':  return json(guard(body, adminSetPayee));
       case 'adminDecide':    return json(guard(body, adminDecide));
       case 'adminUpdate':    return json(guard(body, adminUpdate));
       case 'adminDelete':    return json(guard(body, adminDelete));
@@ -151,18 +158,25 @@ function actionRegister(b) {
       sheet.getRange(row, C.batch).setValue(batch);
       sheet.getRange(row, C.roll).setValue(roll);
       sheet.getRange(row, C.phone).setValue(phone);
+      // Not paid yet — they're about to see the CURRENT price and QR, so the
+      // row must say what they'll actually pay and to whom. A row that already
+      // claimed a payment keeps its original amount and payee.
+      if (status === S.STARTED) {
+        sheet.getRange(row, C.amount).setValue(getPrice());
+        sheet.getRange(row, C.payee).setValue(getPayee());
+      }
       sheet.getRange(row, C.updated).setValue(now);
-      return { ok: true, price: getPrice(), status: status };
+      return { ok: true, price: getPrice(), payee: getPayee(), status: status };
     }
 
     var price = getPrice();
     var values = {
       created: now, name: name, batch: batch, roll: roll, phone: phone, email: email,
       amount: price, status: S.STARTED, code: '', utr: '', shot: '',
-      verifiedAt: '', checkedIn: '', notes: '', updated: now
+      verifiedAt: '', checkedIn: '', notes: '', updated: now, payee: getPayee()
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
-    return { ok: true, price: price, status: S.STARTED };
+    return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
 
   } finally {
     try { lock.releaseLock(); } catch (ignore) {}
@@ -256,8 +270,8 @@ function adminList() {
       rows.push(o);
     }
   }
-  return { ok: true, rows: rows, price: getPrice(), event: EVENT_NAME, statuses: S,
-           paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || '') };
+  return { ok: true, rows: rows, price: getPrice(), payee: getPayee(), event: EVENT_NAME,
+           statuses: S, paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || '') };
 }
 
 function adminSetPrice(b) {
@@ -265,6 +279,18 @@ function adminSetPrice(b) {
   if (!p || p < 1 || p > 100000) return { ok: false, error: 'Price must be between 1 and 100000.' };
   PropertiesService.getScriptProperties().setProperty('TICKET_PRICE', String(p));
   return { ok: true, price: p };
+}
+
+/** Switch which account the payment QR collects to (avoids one account
+    hitting its UPI receiving limit). Applies from the next payment screen on;
+    each row records the payee it was shown. */
+function adminSetPayee(b) {
+  var id = String(b.payee || '').trim().toLowerCase();
+  if (PAYEE_IDS.indexOf(id) < 0) {
+    return { ok: false, error: 'Unknown payee. Allowed: ' + PAYEE_IDS.join(', ') + '.' };
+  }
+  PropertiesService.getScriptProperties().setProperty('PAYEE', id);
+  return { ok: true, payee: id };
 }
 
 /** Pause or resume new registrations, with the message the site shows while
@@ -460,6 +486,11 @@ function getPrice() {
 }
 
 function isPaused() { return prop('REG_PAUSED') === '1'; }
+
+function getPayee() {
+  var id = String(prop('PAYEE') || '').trim().toLowerCase();
+  return PAYEE_IDS.indexOf(id) >= 0 ? id : PAYEE_IDS[0];
+}
 
 function getPauseMessage() {
   return String(prop('PAUSE_MESSAGE') || '').trim() ||

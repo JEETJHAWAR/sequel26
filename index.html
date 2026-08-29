@@ -438,9 +438,8 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 const CONFIG = {
   endpoint: "https://script.google.com/macros/s/AKfycbwLu5ZA85qBd3rBX5ZO3VoRMcYPBISVjdp-BiBF479m2wUdwtIO6K-hjUZ8pTxRdMlY/exec",
 
-  /* Where the money goes. A UPI ID is a public payment address — fine here. */
-  upiId:   "9329641726@upi",
-  upiName: "Mr JEET JHAWAR",
+  /* Where the money goes: see PAYEES below. The admin panel picks who is
+     collecting; the UPI ID, name and QR all follow that choice. */
 
   /* false = QR is generated live from upiId + the current price, and carries a
              per-person note ("SEQUEL26 <roll>") that makes verifying far easier.
@@ -463,14 +462,34 @@ const CONFIG = {
   fallbackPrice: 800     // shown for a split second until the live price loads
 };
 
-/* Price tiers. The admin panel sets the price (Ticket price button); the label
-   and bank-signed QR are looked up here by exact amount. Each QR image has its
-   amount signed into it by the bank, which is why there is one per tier.
-   Keep the labels in sync with TIERS in admin.html. */
+/* Price tiers. The admin panel sets the price (Ticket price button); the
+   label is looked up here by exact amount. Keep in sync with TIERS in
+   admin.html. */
 const TIERS = {
-  800:  { label: "Early bird", qr: "images/upi-qr.png" },
-  1000: { label: "Regular",    qr: "images/upi-qr-1000.jpeg" },
-  1200: { label: "Last call",  qr: "images/upi-qr-1200.jpeg" }
+  800:  { label: "Early bird" },
+  1000: { label: "Regular"    },
+  1200: { label: "Last call"  }
+};
+
+/* Who collects the money. The admin panel picks one (so a single account
+   never hits its UPI receiving limit); the UPI ID, payee name and QR all
+   follow. A UPI ID is a public payment address — fine in a public repo.
+   Each QR image has its amount fixed inside it, which is why there is one
+   file per payee per tier. Keep ids and labels in sync with PAYEES in
+   admin.html (and PAYEE_IDS in apps-script.gs). */
+const PAYEES = {
+  jeet: {
+    upiId: "9329641726@upi", upiName: "Mr JEET JHAWAR",
+    qrs: { 800:  "images/upi-qr.png",
+           1000: "images/upi-qr-1000.jpeg",
+           1200: "images/upi-qr-1200.jpeg" }
+  },
+  anshika: {
+    upiId: "anshika.chauhan258@okhdfcbank", upiName: "Anshika Chauhan",
+    qrs: { 800:  "images/upi-qr-anshika-800.jpeg",
+           1000: "images/upi-qr-anshika-1000.jpeg",
+           1200: "images/upi-qr-anshika-1200.jpeg" }
+  }
 };
 
 const INCLUDES = [
@@ -496,6 +515,8 @@ const waHref = "https://wa.me/" + CONFIG.contactWhatsApp;
 ["footWa","waHelp"].forEach(id=>{ const el=$("#"+id); if(el) el.href = waHref; });
 
 let PRICE = CONFIG.fallbackPrice;
+let PAYEE = "jeet";                              // overwritten by the server
+const payee = () => PAYEES[PAYEE] || PAYEES.jeet;
 function paintPrice(){
   const t = TIERS[PRICE];
   $("#priceLabel").textContent  = rupees(PRICE);
@@ -539,6 +560,7 @@ if(connected()){
   api({action:"price"}).then(d=>{
     if(d && d.ok){
       PRICE = d.price; paintPrice();
+      if(d.payee) PAYEE = d.payee;
       if(d.paused) setPaused(true, d.pauseMsg);
     }
   }).catch(()=>{});
@@ -643,6 +665,7 @@ $("#toPayBtn").addEventListener("click", async ()=>{
       return;
     }
     if(r.price){ PRICE = r.price; paintPrice(); }
+    if(r.payee){ PAYEE = r.payee; }
     openPayment(d);
   }catch(err){
     $("#detailsErrorMsg").textContent = "Couldn't reach the server. Check your connection and try again.";
@@ -656,17 +679,18 @@ $("#toPayBtn").addEventListener("click", async ()=>{
    STEP 2 : payment
    ===================================================================== */
 function openPayment(d){
+  const p = payee();
   $("#payName").textContent  = d.name;
   $("#payBatch").textContent = d.batch;
-  $("#upiId").textContent    = CONFIG.upiId;
+  $("#upiId").textContent    = p.upiId;
 
-  const uri = upiURI(CONFIG.upiId, CONFIG.upiName, PRICE, "SEQUEL26 " + d.roll);
+  const uri = upiURI(p.upiId, p.upiName, PRICE, "SEQUEL26 " + d.roll);
   $("#upiBtn").href = uri;
   $("#upiBtn").textContent = "Open UPI app & pay " + rupees(PRICE);
 
-  const tier = TIERS[PRICE];
-  if(CONFIG.useStaticQR && tier && tier.qr){
-    $("#qrImage").src = tier.qr;                     // the signed QR for this tier
+  const qr = p.qrs[PRICE];
+  if(CONFIG.useStaticQR && qr){
+    $("#qrImage").src = qr;                          // this payee's QR for this tier
     $("#qrCanvas").classList.add("hidden");
     $("#qrImage").classList.remove("hidden");
   }else{
@@ -686,7 +710,7 @@ function openPayment(d){
 
 $("#copyUpi").addEventListener("click", async ()=>{
   try{
-    await navigator.clipboard.writeText(CONFIG.upiId);
+    await navigator.clipboard.writeText(payee().upiId);
     $("#copyUpi").textContent = "Copied";
     setTimeout(()=>{ $("#copyUpi").textContent = "Copy"; }, 2000);
   }catch{ $("#copyUpi").textContent = "Select it manually"; }

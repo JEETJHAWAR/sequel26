@@ -165,6 +165,7 @@ Do this in batches. Twice a day is plenty.
 | Task | How |
 |---|---|
 | Change the price tier | **Ticket price** button — pick Early bird ₹800 / Regular ₹1,000 / Last call ₹1,200. Applies to new registrations only; the site's QR switches with it |
+| Switch who collects | **Collecting** button — Jeet or Anshika. The QR, UPI ID and pay button all switch. Flip before an account hits its daily UPI receiving limit. Verify each row against the account in its **Paid to** column |
 | Pause entries | **Pause entries** button — blocks new sign-ups and shows your message. People mid-payment can still submit their reference. Pause while switching tiers, then resume |
 | Cash at the door | Find them (filter **No payment**) → **Mark paid** |
 | Entry desk | Filter **Paid**, search a name or code → **Check in** |
