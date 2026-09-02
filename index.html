@@ -18,6 +18,7 @@
 <meta name="twitter:card" content="summary_large_image">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23100617'/%3E%3Ctext x='16' y='23' font-family='Arial' font-weight='900' font-size='18' fill='%23FFC24B' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preload" href="images/confetti.jpg" as="image">
 <link rel="preload" href="fonts/bigshoulders.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
@@ -95,9 +96,12 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .payhead .who{font-size:.92rem;color:var(--muted);margin:0}
 .payhead .who b{color:var(--paper)}
 
-.paygrid{display:grid;gap:22px;grid-template-columns:1fr}
-@media(min-width:660px){.paygrid{grid-template-columns:auto 1fr;align-items:center}}
-.qrbox{background:var(--paper);border-radius:14px;padding:12px;width:230px;margin-inline:auto;display:block}
+/* minmax(0,1fr): let the column shrink below its content's min-content width,
+   otherwise the 280px QR box and the long UPI id force the card to overflow
+   on 320-360px phones */
+.paygrid{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:660px){.paygrid{grid-template-columns:auto minmax(0,1fr);align-items:center}}
+.qrbox{background:var(--paper);border-radius:14px;padding:12px;width:280px;max-width:100%;margin-inline:auto;display:block}
 .qrbox canvas,.qrbox img{width:100%;height:auto;display:block;border-radius:6px}
 .payways{display:flex;flex-direction:column;gap:14px}
 .upirow{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.3);
@@ -136,7 +140,7 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .terms li b{color:var(--paper);font-weight:600}
 .check{display:flex;gap:12px;align-items:flex-start;cursor:pointer;background:rgba(0,0,0,.26);
   box-shadow:inset 0 0 0 1px var(--line-2);border-radius:10px;padding:14px;font-size:.92rem;line-height:1.5;
-  transition:box-shadow .15s ease}
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:box-shadow .15s ease}
 .check:hover{box-shadow:inset 0 0 0 1px rgba(247,240,230,.4)}
 .check.invalid{box-shadow:inset 0 0 0 1px var(--hot)}
 .check input{appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:2px 0 0;
@@ -201,15 +205,20 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 .sticky p b{display:block;color:var(--paper);font-weight:500}
 .sticky .btn{padding:12px 22px;font-size:15px;flex:none}
 
-.rise{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.16,1,.3,1)}
+.rise{opacity:0;transform:translateY(14px);transition:opacity .4s ease,transform .4s cubic-bezier(.16,1,.3,1)}
 .rise.in{opacity:1;transform:none}
-.hero-inner > *{opacity:0;animation:enter .9s cubic-bezier(.16,1,.3,1) forwards}
-.hero-inner > *:nth-child(1){animation-delay:.06s}
-.hero-inner > *:nth-child(2){animation-delay:.18s}
-.hero-inner > *:nth-child(3){animation-delay:.30s}
-.hero-inner > *:nth-child(4){animation-delay:.42s}
-.hero-inner > *:nth-child(5){animation-delay:.52s}
-@keyframes enter{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hero-inner > *{opacity:0;animation:enter .55s cubic-bezier(.16,1,.3,1) forwards}
+.hero-inner > *:nth-child(1){animation-delay:.04s}
+.hero-inner > *:nth-child(2){animation-delay:.12s}
+.hero-inner > *:nth-child(3){animation-delay:.20s}
+.hero-inner > *:nth-child(4){animation-delay:.28s}
+.hero-inner > *:nth-child(5){animation-delay:.34s}
+@keyframes enter{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+/* phones: full-width buttons instead of two cramped pills side by side */
+@media(max-width:480px){
+  .hero-cta .btn,.dl .btn,dialog .btn{flex:1 1 100%;width:100%}
+}
 @media (prefers-reduced-motion:reduce){.rise{opacity:1;transform:none}.hero-inner > *{opacity:1;animation:none}}
 </style>
 </head>
@@ -523,7 +532,8 @@ const CONFIG = {
   contactName:     "Students' Council BMS",
   contactWhatsApp: "919329641726",
 
-  fallbackPrice: 800     // shown for a split second until the live price loads
+  fallbackPrice: 800     // shown for a split second until the live price loads;
+                         // matches the ₹800 literals in the markup — change both
 };
 
 /* Price tiers. The admin panel sets the price (Ticket price button); the
@@ -626,8 +636,15 @@ if(connected()){
       PRICE = d.price; paintPrice();
       if(d.payee) PAYEE = d.payee;
       if(d.paused) setPaused(true, d.pauseMsg);
+      preloadQR();
     }
   }).catch(()=>{});
+}
+
+/* Fetch the QR image now so the payment step appears with it already drawn. */
+function preloadQR(){
+  const q = payee().qrs[PRICE];
+  if(CONFIG.useStaticQR && q){ const i = new Image(); i.src = q; }
 }
 
 /* =====================================================================

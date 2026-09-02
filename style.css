@@ -43,23 +43,34 @@ a{color:var(--gold)}
 .lede strong{color:var(--paper);font-weight:600}
 
 /* ---------- buttons ---------- */
+/* touch-action:manipulation removes the double-tap-zoom wait on phones; hover
+   effects only apply on devices that actually hover, so a tap never leaves a
+   button stuck in its hover state; :active gives an instant press. */
 .btn{--bg:var(--gold);--fg:#20102F;appearance:none;border:0;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:10px;
   background:var(--bg);color:var(--fg);font-family:var(--body);font-weight:700;font-size:16px;
   padding:15px 26px;border-radius:999px;text-decoration:none;
-  transition:transform .16s ease,filter .16s ease;box-shadow:0 6px 24px -10px rgba(255,194,75,.8)}
-.btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
+  transition:transform .12s ease,filter .12s ease;box-shadow:0 6px 24px -10px rgba(255,194,75,.8)}
+@media(hover:hover){
+  .btn:hover{transform:translateY(-2px);filter:brightness(1.07)}
+  .btn.ghost:hover{box-shadow:inset 0 0 0 1.5px var(--paper);filter:none}
+}
+.btn:active{transform:translateY(0) scale(.97);filter:brightness(.95);transition-duration:.05s}
 .btn.ghost{--bg:transparent;--fg:var(--paper);box-shadow:inset 0 0 0 1.5px var(--line-2)}
-.btn.ghost:hover{box-shadow:inset 0 0 0 1.5px var(--paper);filter:none}
 .btn.pink{--bg:var(--hot);--fg:#fff;box-shadow:0 6px 24px -10px rgba(255,46,126,.8)}
-.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;filter:none}
 .btn.wide{width:100%}
 
 .mini{appearance:none;border:0;cursor:pointer;background:rgba(0,0,0,.3);color:var(--paper);
   box-shadow:inset 0 0 0 1px var(--line-2);border-radius:999px;padding:9px 16px;
   font-family:var(--body);font-size:14px;font-weight:600;text-decoration:none;
-  display:inline-flex;align-items:center;gap:7px}
-.mini:hover{box-shadow:inset 0 0 0 1px var(--paper)}
+  display:inline-flex;align-items:center;gap:7px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
+  transition:transform .1s ease,box-shadow .12s ease}
+@media(hover:hover){.mini:hover{box-shadow:inset 0 0 0 1px var(--paper)}}
+.mini:active{transform:scale(.96);transition-duration:.05s}
+.mini[disabled]{opacity:.6;cursor:not-allowed;transform:none}
 .mini.on{background:var(--gold-dim);box-shadow:inset 0 0 0 1.5px var(--gold);color:var(--paper)}
 
 /* ---------- form controls ---------- */
@@ -96,8 +107,13 @@ select option{background:var(--panel);color:var(--paper)}
 .seg button{appearance:none;border:0;cursor:pointer;font-family:var(--disp);text-transform:uppercase;
   font-weight:800;font-size:1.2rem;line-height:1;color:var(--muted);
   background:rgba(0,0,0,.26);box-shadow:inset 0 0 0 1px var(--line-2);
-  padding:15px 28px;border-radius:12px;transition:all .16s ease;flex:1;min-width:132px}
-.seg button:hover{color:var(--paper);box-shadow:inset 0 0 0 1px rgba(247,240,230,.42);transform:translateY(-2px)}
+  padding:15px 28px;border-radius:12px;flex:1;min-width:132px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;
+  transition:color .12s ease,box-shadow .12s ease,transform .12s ease,background .12s ease}
+@media(hover:hover){
+  .seg button:hover{color:var(--paper);box-shadow:inset 0 0 0 1px rgba(247,240,230,.42);transform:translateY(-2px)}
+}
+.seg button:active{transform:scale(.98);transition-duration:.05s}
 .seg button[aria-pressed=true]{background:var(--gold-dim);color:var(--paper);box-shadow:inset 0 0 0 2px var(--gold)}
 .seg button small{display:block;font-family:var(--body);font-size:11.5px;font-weight:500;
   text-transform:none;color:var(--muted-2);margin-top:5px;letter-spacing:0}
