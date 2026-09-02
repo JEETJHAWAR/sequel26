@@ -138,15 +138,13 @@ people will find it — the password is what protects it.
 
 ---
 
-## Campus photos
+## Photos
 
-The hero uses the confetti image. To use campus photos instead, drop them in as:
-
-- `images/campus-kochi.jpg` — the hero picks this up automatically if present
-- `images/campus-main.jpg` — spare
-
-The CSS already falls back to `confetti.jpg` if the file isn't there, so nothing
-breaks either way. Landscape, at least 1600px wide.
+The hero uses `images/hero.jpg` (landscape, at least 1200px wide — pick one that
+is dark towards the bottom, where the title sits). The sections below it use the
+`images/campus-*.jpg` photos as dimmed backdrops; swap any of them by replacing
+the file, or point a section at a different one via its `--bg-img` style in
+`index.html`.
 
 ---
 

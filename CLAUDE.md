@@ -19,7 +19,7 @@ Static site on GitHub Pages. **No build step, no npm, no bundler, no payment gat
 | `pass.js` | Draws the pass on canvas; exports PNG and a hand-built PDF. |
 | `apps-script.gs` | The backend. Pasted into Google Apps Script, NOT served by the site. |
 | `fonts/` | Three self-hosted WOFF2 files. No CDN fallback — do not delete. |
-| `images/` | `confetti.jpg` (hero fallback), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`. |
+| `images/` | `hero.jpg` (hero background), `campus-*.jpg` (section backdrops under a dark veil), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`. |
 
 ## Status flow
 
@@ -65,10 +65,12 @@ it `false` reverts to live QRs everywhere; those carry the per-person
 Registrations can be **paused** from the admin panel ("Pause entries", with a
 custom message). State lives in Script Properties (`REG_PAUSED`, `PAUSE_MESSAGE`),
 written by `adminSetPause` — flipping it needs no redeploy. While paused, new
-registrations are blocked and the site swaps the form for the message, but
-`submitPayment` stays open on purpose (someone mid-flow must never lose a payment
-claim) and already-paid students still get their pass back. Default message text
-is in `getPauseMessage()` in `apps-script.gs`.
+registrations are blocked, the site swaps the form for the message, and the
+payment step hides its QR / pay button (the page re-polls `price` every 45 s
+while on that step or while paused, so a mid-flow pause takes effect without a
+reload). `submitPayment` stays open on purpose (someone who already paid must
+never lose the claim) and already-paid students still get their pass back.
+Default message text is in `getPauseMessage()` in `apps-script.gs`.
 
 Screenshots are shrunk in the browser (`shrinkImage()`, max 1000px, JPEG 0.72), sent
 as base64, and written to a private Drive folder by `saveScreenshot()`. Upload
@@ -110,8 +112,10 @@ the UPI reference number is the thing that matters.
   printed on the pass).
 - *"Change the price"* → the admin panel's tier dialog, not code. A new tier (say
   ₹1500) needs a new bank-signed QR image plus a `TIERS` entry in both files.
-- *"Use the campus photo"* → drop it at `images/campus-kochi.jpg`; the hero CSS
-  already prefers it and falls back to `confetti.jpg`.
+- *"Change the hero photo"* → replace `images/hero.jpg` (landscape, ≥1200 px wide,
+  dark at the bottom where the title sits) and check `.hero-veil` in `index.html`.
+  Section backdrops are the `--bg-img` inline styles on each `.bgphoto` section,
+  darkened by the gradient in `.bgphoto::before`.
 - *"Add a QR to the pass"* → `qr.js` is already loaded on the page; you could encode
   the pass code. Discuss first — the entry desk currently works fine by search.
 - *"Let people register a friend"* → the schema is one row per person keyed by email.

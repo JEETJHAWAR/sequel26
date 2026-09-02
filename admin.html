@@ -124,8 +124,8 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
     <div class="notice warn hidden" id="pausedBanner" style="margin:0 0 20px">
       <b>Registrations are paused.</b>
       <p id="pausedBannerMsg"></p>
-      <p style="color:var(--muted-2)">New sign-ups are blocked on the site. Anyone already on the
-      payment step can still submit their reference, and paid students can still open their pass.</p>
+      <p style="color:var(--muted-2)">New sign-ups are blocked and the payment QR is off the site.
+      Anyone who already paid can still submit their reference, and paid students can still open their pass.</p>
     </div>
 
     <div class="notice bad hidden" id="dupeBanner" style="margin:0 0 20px">
@@ -208,9 +208,9 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
 <dialog id="pauseDlg">
   <h3 id="pauseTitle">Pause entries</h3>
   <p class="hint" style="margin:0 0 16px">
-    Blocks new registrations on the site and shows your message instead of the form.
-    People already on the payment step can still submit their reference — a payment
-    claim is never lost — and paid students can still open their pass.
+    Blocks new registrations and takes the payment QR off the site, showing your message
+    instead. Anyone who has already paid can still submit their reference number, and paid
+    students can still open their pass.
   </p>
   <div class="field">
     <label for="pauseText">Message shown to students</label>
