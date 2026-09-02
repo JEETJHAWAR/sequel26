@@ -62,7 +62,8 @@ const COLS = [
   ['Checked in',  'checkedIn'],
   ['Notes',       'notes'],
   ['Updated',     'updated'],
-  ['Paid to',     'payee']     // appended last so existing sheets don't shift
+  ['Paid to',     'payee'],    // appended last so existing sheets don't shift
+  ['Consent',     'consent']   // when they ticked the house-rules box
 ];
 
 /** Who can collect payments. Mirrored in PAYEES in index.html and admin.html —
@@ -129,6 +130,9 @@ function actionRegister(b) {
   if (!/@iimk\.ac\.in$/.test(email)) {
     return { ok: false, error: 'Use your IIMK email — it must end with @iimk.ac.in.' };
   }
+  if (b.consent !== true) {
+    return { ok: false, error: 'Please tick the box to confirm you agree to the house rules.' };
+  }
 
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -147,17 +151,33 @@ function actionRegister(b) {
       return { ok: false, paused: true, error: getPauseMessage() };
     }
 
+    // Already approved — hand back the pass, don't ask them to pay again.
+    if (row > 0 && readCell(sheet, row, 'status') === S.PAID) {
+      return { ok: true, pass: passFromRow(sheet, row) };
+    }
+
+    // One person, one registration. Email is the key, but a roll number
+    // must not appear under a second email either — that is how people end
+    // up registering (and paying) twice. A row that already holds this roll
+    // under this email is simply theirs; a duplicate that predates this rule
+    // is flagged in the admin panel for the organiser to delete.
+    var rollRow = findRowBy(sheet, 'roll', roll);
+    var ownRoll = row > 0 ? String(readCell(sheet, row, 'roll')).trim().toUpperCase() : '';
+    if (rollRow > 0 && rollRow !== row && ownRoll !== roll.toUpperCase()) {
+      return { ok: false, error: 'Roll number ' + roll + ' is already registered under ' +
+        maskEmail(readCell(sheet, rollRow, 'email')) + '. Use "Check my status" with that email — ' +
+        'or message the Students\' Council if that isn\'t you.' };
+    }
+
     if (row > 0) {
       var status = readCell(sheet, row, 'status');
-
-      // Already approved — hand back the pass, don't ask them to pay again.
-      if (status === S.PAID) return { ok: true, pass: passFromRow(sheet, row) };
 
       // Update their details but keep whatever payment state they're in.
       sheet.getRange(row, C.name).setValue(name);
       sheet.getRange(row, C.batch).setValue(batch);
       sheet.getRange(row, C.roll).setValue(roll);
       sheet.getRange(row, C.phone).setValue(phone);
+      if (!readCell(sheet, row, 'consent')) sheet.getRange(row, C.consent).setValue(now);
       // Not paid yet — they're about to see the CURRENT price and QR, so the
       // row must say what they'll actually pay and to whom. A row that already
       // claimed a payment keeps its original amount and payee.
@@ -173,7 +193,8 @@ function actionRegister(b) {
     var values = {
       created: now, name: name, batch: batch, roll: roll, phone: phone, email: email,
       amount: price, status: S.STARTED, code: '', utr: '', shot: '',
-      verifiedAt: '', checkedIn: '', notes: '', updated: now, payee: getPayee()
+      verifiedAt: '', checkedIn: '', notes: '', updated: now, payee: getPayee(),
+      consent: now
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
     return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
@@ -498,6 +519,13 @@ function getPauseMessage() {
 }
 
 function readCell(sheet, row, key) { return sheet.getRange(row, C[key]).getValue(); }
+
+/** j***@iimk.ac.in — enough to recognise your own address, not someone else's. */
+function maskEmail(email) {
+  var m = String(email || '').split('@');
+  if (m.length < 2) return 'another email';
+  return m[0].charAt(0) + '***@' + m[1];
+}
 
 function findRow(sheet, email) { return findRowBy(sheet, 'email', email); }
 

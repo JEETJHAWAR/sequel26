@@ -128,6 +128,14 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
       payment step can still submit their reference, and paid students can still open their pass.</p>
     </div>
 
+    <div class="notice bad hidden" id="dupeBanner" style="margin:0 0 20px">
+      <b>Duplicate roll numbers</b>
+      <p id="dupeList"></p>
+      <p style="color:var(--muted-2)">The site now refuses a roll number that is already registered under another
+      email, but these rows predate that rule. Delete the stale one (usually the unpaid row with the
+      typo'd email) so the student isn't blocked or charged twice.</p>
+    </div>
+
     <dl class="stats" id="stats"></dl>
 
     <div class="controls">
@@ -381,6 +389,14 @@ function paintControls(){
   $("#pausedBannerMsg").textContent = PAUSEMSG
     ? 'Site message: "' + PAUSEMSG + '"'
     : "No custom message set — the site shows the default text.";
+
+  const byRoll = {};
+  ROWS.forEach(r=>{ const k=String(r.roll||"").trim().toUpperCase(); if(k) (byRoll[k]=byRoll[k]||[]).push(r); });
+  const dupes = Object.entries(byRoll).filter(([,rs])=>rs.length>1);
+  $("#dupeBanner").classList.toggle("hidden", !dupes.length);
+  $("#dupeList").innerHTML = dupes.map(([roll,rs])=>
+    `<b style="display:inline">${esc(roll)}</b> — ` + rs.map(r=>`${esc(r.email)} (${esc(r.status)})`).join(", ")
+  ).join("<br>");
 }
 
 function render(){
@@ -568,8 +584,8 @@ $("#pauseSaveMsg").addEventListener("click", e=>sendPause(e.target, true));
 
 /* ---------- CSV ---------- */
 $("#csvBtn").addEventListener("click", ()=>{
-  const cols = ["name","batch","roll","phone","email","status","utr","code","amount","payee","verifiedAt","checkedIn","created","notes"];
-  const head = ["Name","Batch","Roll no","WhatsApp","Email","Status","UPI ref","Pass code","Amount","Paid to","Verified","Checked in","Registered","Notes"];
+  const cols = ["name","batch","roll","phone","email","status","utr","code","amount","payee","verifiedAt","checkedIn","created","consent","notes"];
+  const head = ["Name","Batch","Roll no","WhatsApp","Email","Status","UPI ref","Pass code","Amount","Paid to","Verified","Checked in","Registered","Consent","Notes"];
   const cell = v => {
     const s = String(v == null ? "" : v);
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;

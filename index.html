@@ -129,6 +129,36 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .drop .tx span{font-size:12.5px;color:var(--muted-2);display:block;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 
+/* ---------- house rules + consent ---------- */
+.terms{border-top:1px solid var(--line);padding-top:20px}
+.terms ul{margin:0 0 16px;padding-left:18px;color:var(--muted);font-size:.9rem;line-height:1.55}
+.terms li{margin-bottom:7px}
+.terms li b{color:var(--paper);font-weight:600}
+.check{display:flex;gap:12px;align-items:flex-start;cursor:pointer;background:rgba(0,0,0,.26);
+  box-shadow:inset 0 0 0 1px var(--line-2);border-radius:10px;padding:14px;font-size:.92rem;line-height:1.5;
+  transition:box-shadow .15s ease}
+.check:hover{box-shadow:inset 0 0 0 1px rgba(247,240,230,.4)}
+.check.invalid{box-shadow:inset 0 0 0 1px var(--hot)}
+.check input{appearance:none;-webkit-appearance:none;width:22px;height:22px;flex:none;margin:2px 0 0;
+  border-radius:6px;border:1.5px solid var(--line-2);background:rgba(0,0,0,.3);
+  display:grid;place-items:center;cursor:pointer;padding:0}
+.check input:checked{background:var(--gold);border-color:var(--gold)}
+.check input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.check input:checked::after{content:"";width:6px;height:11px;border:solid #20102F;border-width:0 3px 3px 0;
+  transform:translateY(-1px) rotate(45deg)}
+
+/* ---------- confirm dialog ---------- */
+dialog{border:1px solid var(--line-2);border-radius:var(--r);background:var(--panel);color:var(--paper);
+  padding:28px;max-width:440px;width:calc(100% - 40px)}
+dialog::backdrop{background:rgba(5,2,9,.72)}
+dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-size:1.7rem;margin:0 0 8px;line-height:1}
+.cf{list-style:none;margin:16px 0 18px;padding:0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.cf li{display:flex;justify-content:space-between;gap:14px;padding:11px 14px;background:rgba(0,0,0,.22);
+  border-bottom:1px solid var(--line);font-size:.93rem}
+.cf li:last-child{border-bottom:0}
+.cf span{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);flex:none;padding-top:3px}
+.cf b{font-weight:600;text-align:right;overflow-wrap:anywhere}
+
 /* ---------- pass ---------- */
 .passwrap{max-width:560px}
 .passwrap canvas{width:100%;height:auto;border-radius:16px;display:block;
@@ -244,7 +274,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
     <div class="rise" style="margin-bottom:30px">
       <p class="eyebrow">Register</p>
       <h2 class="h2">Get your pass<i>.</i></h2>
-      <p class="lede">Fill this in, pay by UPI, and send us the reference number. A human checks it — usually within a few hours — and then your pass is ready to download.</p>
+      <p class="lede">Fill this in, pay by UPI, and send us the reference number. A human checks it — usually within a few hours — and then your pass is ready to download. <strong>One registration per person</strong> — check your details before you continue.</p>
     </div>
 
     <!-- PAUSED — replaces step 1 while the organisers have entries switched off -->
@@ -295,6 +325,22 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 
       <div style="position:absolute;left:-9999px" aria-hidden="true">
         <label for="website">Leave empty</label><input type="text" id="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <div class="terms" id="terms">
+        <span class="field-label">House rules <span class="req">*</span></span>
+        <ul>
+          <li><b>Zero tolerance.</b> Anyone found drunk or under the influence, drinking, smoking, or using or carrying any drugs will be removed from the venue immediately. No refund.</li>
+          <li><b>One pass, one person.</b> Passes are non-transferable and non-refundable. Your name and code are checked at the door.</li>
+          <li><b>The organisers' call is final.</b> Follow instructions from the Students' Council and venue staff. Misbehaviour means removal.</li>
+          <li><b>Your belongings are your responsibility.</b> The organisers and the venue are not liable for loss or damage.</li>
+          <li><b>Photos and videos</b> taken at the event may be used by the Students' Council.</li>
+        </ul>
+        <label class="check" id="consentBox" for="consent">
+          <input type="checkbox" id="consent">
+          <span>I'm attending SEQUEL 26 willingly and of my own choice, and I have read and agree to all the terms and conditions above.</span>
+        </label>
+        <div class="err hidden" id="consentErr"></div>
       </div>
 
       <div class="total"><span>Amount payable</span><b id="priceLabel">₹800</b></div>
@@ -419,7 +465,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 <footer class="bgphoto" style="--bg-img:url('images/campus-lawn.jpg')">
   <div class="wrap foot">
     <p><b>SEQUEL 26</b><br>Bachelor of Management Studies<br>IIM Kozhikode — Kochi Campus</p>
-    <p>Registration closes <b data-cfg="deadline">Saturday 12 September</b><br>
+    <p>Registration closes <b data-cfg="deadline">Sunday 13 September</b><br>
        Questions → <a id="footWa" href="#" target="_blank" rel="noopener"><b data-cfg="contactName">the organisers</b></a></p>
   </div>
 </footer>
@@ -428,6 +474,24 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
   <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">₹800 · TBC</b></p>
   <a class="btn" href="#register">Get pass</a>
 </div>
+
+<!-- Shown before the details are saved: one registration per person, and
+     these details go on the pass and receive the verification email. -->
+<dialog id="confirmDlg" aria-labelledby="cfTitle" aria-describedby="cfHint cfList">
+  <h3 id="cfTitle">Check your details</h3>
+  <p class="hint" id="cfHint" style="margin:0">One registration per person. This is what goes on your pass and where your verification email lands — a typo here means a wrong pass or a lost email.</p>
+  <ul class="cf" id="cfList">
+    <li><span>Name</span><b id="cfName"></b></li>
+    <li><span>Batch</span><b id="cfBatch"></b></li>
+    <li><span>Roll no</span><b id="cfRoll"></b></li>
+    <li><span>WhatsApp</span><b id="cfPhone"></b></li>
+    <li><span>Email</span><b id="cfEmail"></b></li>
+  </ul>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button type="button" class="btn" id="cfGo">Looks right — continue</button>
+    <button type="button" class="btn ghost" id="cfBack">Go back and edit</button>
+  </div>
+</dialog>
 
 <script src="qr.js"></script>
 <script src="pass.js"></script>
@@ -449,14 +513,14 @@ const CONFIG = {
   useStaticQR: true,
 
   eventName:     "SEQUEL 26",
-  eventDate:     "TBC",
-  eventDateFull: "To be confirmed",
-  eventTime:     "TBC",
-  venue:         "TBC",
-  deadline:      "Saturday 12 September",
-  deadlineShort: "Registration closes 12 Sept",
+  eventDate:     "Sun 20 Sept",
+  eventDateFull: "Sunday 20 September 2026, 5–9 PM",   // printed on the pass
+  eventTime:     "5–9 PM",
+  venue:         "Mia Gardens",
+  deadline:      "Sunday 13 September",
+  deadlineShort: "Registration closes 13 Sept",
 
-  contactName:     "Student Council BMS",
+  contactName:     "Students' Council BMS",
   contactWhatsApp: "919329641726",
 
   fallbackPrice: 800     // shown for a split second until the live price loads
@@ -623,22 +687,32 @@ function validateDetails(){
     fail($("#phone"),"Ten digits, no country code.");
   if(!/^[^\s@]+@iimk\.ac\.in$/i.test($("#email").value.trim()))
     fail($("#email"),"Use your IIMK email — it ends with @iimk.ac.in.");
+  if(!$("#consent").checked){
+    $("#consentBox").classList.add("invalid");
+    const b=$("#consentErr"); b.textContent="Tick the box to confirm you agree to the house rules."; b.classList.remove("hidden");
+    if(!first) first=$("#terms");
+  }
   if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
   return !first;
 }
+$("#consent").addEventListener("change", ()=>{
+  $("#consentBox").classList.remove("invalid");
+  $("#consentErr").classList.add("hidden");
+});
 
 const details = () => ({
   name:  $("#name").value.trim(),
   roll:  normRoll($("#roll").value),
   phone: $("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,""),
   email: $("#email").value.trim().toLowerCase(),
-  batch, website: $("#website").value.trim()
+  batch, website: $("#website").value.trim(),
+  consent: $("#consent").checked
 });
 
 /* =====================================================================
    STEP 1 -> 2
    ===================================================================== */
-$("#toPayBtn").addEventListener("click", async ()=>{
+$("#toPayBtn").addEventListener("click", ()=>{
   if(!validateDetails()) return;
   $("#detailsError").classList.add("hidden");
 
@@ -648,6 +722,19 @@ $("#toPayBtn").addEventListener("click", async ()=>{
     return;
   }
 
+  // One registration per person: make them look at what they typed first.
+  const d = details();
+  $("#cfName").textContent  = d.name;
+  $("#cfBatch").textContent = d.batch;
+  $("#cfRoll").textContent  = d.roll;
+  $("#cfPhone").textContent = d.phone;
+  $("#cfEmail").textContent = d.email;
+  $("#confirmDlg").showModal();
+});
+$("#cfBack").addEventListener("click", ()=>$("#confirmDlg").close());
+$("#cfGo").addEventListener("click", ()=>{ $("#confirmDlg").close(); saveDetails(); });
+
+async function saveDetails(){
   const btn = $("#toPayBtn");
   loading(btn, true, "Saving…");
   try{
@@ -673,7 +760,7 @@ $("#toPayBtn").addEventListener("click", async ()=>{
   }finally{
     loading(btn, false, "Continue to payment");
   }
-});
+}
 
 /* =====================================================================
    STEP 2 : payment

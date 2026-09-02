@@ -1,8 +1,9 @@
 # SEQUEL 26
 
 Freshers registration site for the BMS programme at IIM Kozhikode, Kochi Campus.
-Both batches (BMS-01, BMS-02) register, pay ₹800 by **UPI**, and an organiser
-**verifies each payment by hand**. Only then is a pass code issued and the student
+Both batches (BMS-01, BMS-02) register, pay by **UPI** (tiered price), and an
+organiser **verifies each payment by hand**. Run by the Students' Council BMS
+(note the apostrophe — "Students' Council"). Only then is a pass code issued and the student
 emailed. There is a password-protected admin panel.
 
 Static site on GitHub Pages. **No build step, no npm, no bundler, no payment gateway.**
@@ -114,6 +115,12 @@ the UPI reference number is the thing that matters.
 - *"Add a QR to the pass"* → `qr.js` is already loaded on the page; you could encode
   the pass code. Discuss first — the entry desk currently works fine by search.
 - *"Let people register a friend"* → the schema is one row per person keyed by email.
-  Don't break that; duplicate detection and status lookup both rely on it.
+  Don't break that; duplicate detection and status lookup both rely on it. The
+  roll number is also unique server-side: a second email for the same roll is
+  rejected (with the existing email masked) so nobody registers or pays twice.
+  The site shows a "Check your details" dialog before saving for the same reason.
+- *"Change the house rules / T&C"* → the `#terms` block in `index.html`. The consent
+  checkbox is required client-side, enforced in `actionRegister` (`consent === true`),
+  and the tick time is stored in the `Consent` sheet column (in the CSV, not the table).
 - *"Auto-verify payments"* → not possible without a gateway or bank API. Manual
   verification is the deliberate design here.
