@@ -133,6 +133,18 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .drop .tx span{font-size:12.5px;color:var(--muted-2);display:block;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 
+/* ---------- roll number: fixed BMS/0x/ label + digits ---------- */
+.rollwrap{display:flex;align-items:stretch;background:rgba(0,0,0,.28);border:1px solid var(--line-2);
+  border-radius:10px;cursor:text;transition:border-color .15s ease,background .15s ease}
+.rollwrap:hover{border-color:rgba(247,240,230,.36)}
+.rollwrap:focus-within{border-color:var(--gold);background:rgba(0,0,0,.44);box-shadow:0 0 0 3px rgba(255,194,75,.16)}
+.invalid .rollwrap{border-color:var(--hot)}
+/* the input's own line box sets the height; the label just centres in it */
+.rollwrap .prefix{display:flex;align-items:center;font-family:var(--mono);font-size:15px;color:var(--gold);
+  padding:0 0 0 15px;line-height:1;white-space:nowrap;-webkit-user-select:none;user-select:none}
+.rollwrap input,.rollwrap input:hover,.rollwrap input:focus{background:none;border:0;box-shadow:none;outline:none;flex:1;min-width:0}
+.rollwrap.on input{padding-left:6px}
+
 /* ---------- house rules + consent ---------- */
 .terms{border-top:1px solid var(--line);padding-top:20px}
 .terms ul{margin:0 0 16px;padding-left:18px;color:var(--muted);font-size:.9rem;line-height:1.55}
@@ -313,8 +325,12 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
         </div>
         <div class="field">
           <label for="roll">Roll number <span class="req">*</span></label>
-          <input type="text" id="roll" placeholder="BMS/01/007">
+          <div class="rollwrap" id="rollWrap">
+            <span class="prefix hidden" id="rollPrefix" aria-hidden="true"></span>
+            <input type="text" id="roll" placeholder="BMS/01/007" autocomplete="off" aria-describedby="rollHint">
+          </div>
           <div class="err hidden"></div>
+          <span class="hint" id="rollHint">Pick your batch above, then type just your number.</span>
         </div>
       </div>
 
@@ -651,13 +667,69 @@ function preloadQR(){
    FORM HELPERS
    ===================================================================== */
 let batch = "";
+const rollPrefix = () => batch ? "BMS/" + batch.slice(4) + "/" : "";
+const rollEl = $("#roll"), rollWrap = $("#rollWrap"), rollPre = $("#rollPrefix");
+
+/* Which batch a typed roll names ("BMS-01" / "BMS-02"), or "" for bare digits. */
+function rollNames(v){
+  const m = String(v).toUpperCase().match(/BMS[^0-9]*0?([12])(?![0-9])/);
+  return m ? "BMS-0" + m[1] : "";
+}
+/* The digits after any BMS/0x/ prefix — repeated prefixes too, so a pasted
+   full roll still yields its number. The (?![0-9]) guard stops "BMS/147"
+   being read as batch 1 + "47". Never truncated: too many digits must fail
+   validation, not silently become a different, valid-looking roll. */
+function rollDigits(v){
+  return String(v).toUpperCase()
+    .replace(/^(\s*BMS[\s\/\\\-._]*0?[12](?![0-9])[\s\/\\\-._]*)+/, "")
+    .replace(/\D/g, "");
+}
+
+/* With a batch picked, BMS/0x/ is shown as a fixed label OUTSIDE the input
+   and the input holds only the digits, so nothing a student types or pastes
+   can mangle the prefix. A roll that names the OTHER batch is left exactly
+   as typed (label hidden) so validation can point out the mismatch. */
+function maskRoll(){
+  if(!batch) return;
+  const named = rollNames(rollEl.value);
+  const digitsMode = !named || named === batch;
+  rollPre.textContent = rollPrefix();
+  rollPre.classList.toggle("hidden", !digitsMode);
+  rollWrap.classList.toggle("on", digitsMode);
+  rollEl.inputMode = digitsMode ? "numeric" : "text";
+  rollEl.placeholder = digitsMode ? "047" : "BMS/" + batch.slice(4) + "/047";
+  if(digitsMode){
+    const d = rollDigits(rollEl.value);
+    if(d !== rollEl.value) rollEl.value = d;
+  }
+}
+
 $$("#batchSeg button").forEach(b=>{
   b.addEventListener("click", ()=>{
     batch = b.dataset.v;
     $$("#batchSeg button").forEach(x=>x.setAttribute("aria-pressed", String(x===b)));
     $("#batchErr").classList.add("hidden");
-    $("#roll").placeholder = "BMS/" + batch.slice(4) + "/007";
+    $("#rollHint").textContent = "Just type your number after " + rollPrefix();
+    maskRoll();
+    const named = rollNames(rollEl.value);
+    if(named && named !== batch){
+      // They typed a full roll for a different batch before picking one:
+      // say so rather than silently re-labelling it.
+      setError(rollEl.closest(".field"),
+        "That roll number says BMS/0" + named.slice(-1) + ", but you picked " + batch + ".");
+    }else{
+      clearError(rollEl.closest(".field"));
+    }
   });
+});
+rollEl.addEventListener("input", maskRoll);
+/* The BMS/0x/ label and the box padding read as part of the field, so a tap
+   there must land in the input. mousedown rather than click so an already
+   focused input isn't blurred first (which would flash the keyboard closed). */
+rollWrap.addEventListener("mousedown", e=>{
+  if(e.target === rollEl) return;
+  e.preventDefault();
+  rollEl.focus();
 });
 
 function setError(field,msg){
@@ -697,7 +769,8 @@ function validateDetails(){
   }
   if(!$("#name").value.trim()) fail($("#name"),"We need your name for the pass.");
   const roll = normRoll($("#roll").value);
-  if(!roll) fail($("#roll"),"Format: BMS/01/007 or BMS/02/007.");
+  if(!roll) fail($("#roll"), batch ? "Just the number after " + rollPrefix() + " — 1 to 3 digits, e.g. 047."
+                                   : "Format: BMS/01/007 or BMS/02/007.");
   else if(batch && roll.slice(4,6) !== batch.slice(4))
     fail($("#roll"),"That roll number says BMS/" + roll.slice(4,6) + ", but you picked " + batch + ".");
   if(!/^\d{10}$/.test($("#phone").value.replace(/\D/g,"").replace(/^91(?=\d{10}$)/,"")))
