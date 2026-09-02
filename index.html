@@ -391,7 +391,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
             <canvas id="qrCanvas" role="img" aria-label="UPI payment QR code"></canvas>
             <img id="qrImage" class="hidden" src="images/upi-qr.png" alt="UPI payment QR code">
           </div>
-          <p class="qrcap">Scan from another phone</p>
+          <p class="qrcap">Scan from another phone · GPay, PhonePe, Paytm, any UPI app</p>
         </div>
         <div class="payways">
           <a class="btn wide" id="upiBtn" href="#">Open UPI app &amp; pay</a>
@@ -401,11 +401,18 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
           </div>
           <p class="paynote">The QR and the button both carry the exact amount. If your app asks
             you to type it, pay <b id="payAmount2">₹800</b> — a different amount can't be verified.</p>
+          <p class="paynote"><b>After paying, come back to this page</b> and enter the UPI reference
+            number in step 03 below — that's the only way we can verify you. A screenshot on
+            WhatsApp alone won't get you a pass.</p>
         </div>
       </div>
 
       <div class="confirm">
         <p class="card-title" style="margin-bottom:16px"><span class="n">03 /</span> Tell us you've paid</p>
+        <div class="notice warn hidden" id="backNote" style="margin:0 0 18px">
+          <b>Paid? One more step.</b>
+          <p>Enter the UPI reference number below and hit Submit — we can't verify the payment without it.</p>
+        </div>
 
         <div class="field">
           <label for="utr">UPI reference / transaction ID <span class="req">*</span></label>
@@ -884,6 +891,20 @@ function openPayment(d){
   $("#stepPay").classList.remove("hidden");
   $("#stepPay").scrollIntoView({behavior:"smooth", block:"start"});
 }
+
+/* The pay button hands them to a UPI app. When they come back to this tab,
+   walk them to step 03 — otherwise many pay and never submit the reference. */
+let leftToPay = false;
+$("#upiBtn").addEventListener("click", ()=>{ leftToPay = true; });
+function cameBack(){
+  if(!leftToPay || document.visibilityState !== "visible") return;
+  if($("#stepPay").classList.contains("hidden")) return;
+  leftToPay = false;
+  $("#backNote").classList.remove("hidden");
+  $("#backNote").scrollIntoView({behavior:"smooth", block:"center"});
+}
+document.addEventListener("visibilitychange", cameBack);
+window.addEventListener("focus", cameBack);
 
 $("#copyUpi").addEventListener("click", async ()=>{
   try{
