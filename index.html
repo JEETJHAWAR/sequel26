@@ -69,6 +69,15 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 .bgphoto::before{content:"";position:absolute;inset:0;z-index:-1;background-image:
   linear-gradient(rgba(16,6,23,.80),rgba(16,6,23,.90)),var(--bg-img);
   background-size:cover;background-position:center}
+/* the register section keeps the heavier veil so the form sits on near-solid ink */
+.bgphoto.dark::before{background-image:linear-gradient(rgba(16,6,23,.93),rgba(16,6,23,.97)),var(--bg-img)}
+
+/* register: intro centred, every card/notice centred, form text left inside them */
+#register .wrap{text-align:center}
+#register .eyebrow{justify-content:center}
+#register .lede{margin-inline:auto}
+#register .card,#register .waiting,#register .passwrap,#register #pausedNote{margin-inline:auto}
+#register .card,#register .passwrap,#register #pausedNote{text-align:left}
 .two{display:grid;gap:clamp(26px,5vw,60px);grid-template-columns:1fr}
 @media(min-width:900px){.two{grid-template-columns:1fr 1fr;align-items:start}}
 .two p{margin:0 0 15px;color:var(--muted)}
@@ -291,7 +300,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 </section>
 
 <!-- ===== REGISTER ===== -->
-<section class="pad bgphoto" id="register" style="border-top:1px solid var(--line);--bg-img:url('images/campus-main.jpg')">
+<section class="pad bgphoto dark" id="register" style="border-top:1px solid var(--line);--bg-img:url('images/campus-main.jpg')">
   <div class="wrap">
     <div class="rise" style="margin-bottom:30px">
       <p class="eyebrow">Register</p>
