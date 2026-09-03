@@ -157,6 +157,7 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
 
     <div class="controls">
       <input type="text" id="q" placeholder="Search name, roll, code, phone or email…" autocomplete="off">
+      <span class="hint" id="updatedAt" style="margin:0;white-space:nowrap"></span>
       <div class="filters" id="filters">
         <button type="button" class="mini on" data-f="verify">To verify</button>
         <button type="button" class="mini" data-f="all">All</button>
@@ -281,6 +282,8 @@ let PAUSED = false;
 let PAUSEMSG = "";
 let FULL = false;           // auto-collect closed the batch (new registrations refused)
 let FULLMSG = "";
+let SEEN = null;            // emails seen on the previous load — new ones get a "new" pill
+let refreshTimer = null;
 let filter = "verify";
 const ST = { STARTED:"Awaiting payment", CLAIMED:"Verifying", PAID:"Paid", REJECTED:"Rejected" };
 
@@ -363,12 +366,14 @@ async function login(){
       $("#pw").value = "";
       if(r.rows) applyList(r);            // the new backend signs in and lists in one go
       else await load();                  // older backend: fetch the list separately
+      startAutoRefresh();
     }else{ PW=""; gateError(r.error || "Wrong password."); }
   }catch(err){ PW=""; gateError("Couldn't reach the server."); }
   finally{ b.disabled=false; b.textContent="Sign in"; }
 }
 
 $("#outBtn").addEventListener("click", ()=>{
+  clearInterval(refreshTimer); refreshTimer = null; SEEN = null; document.title = "SEQUEL 26 — Admin";
   PW=""; ROWS=[];
   $("#panel").classList.add("hidden");
   $("#gate").classList.remove("hidden");
@@ -390,13 +395,31 @@ async function load(){
   }finally{ b.disabled=false; b.textContent="Refresh"; }
 }
 
+/* The panel keeps itself current: every minute while visible, and the moment
+   the tab is brought back to the front. No reload, no password re-entry. */
+function startAutoRefresh(){
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(()=>{
+    if(document.visibilityState === "visible" && PW && !$("dialog[open]")) load();
+  }, 60000);
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible" && PW && !$("dialog[open]")) load();
+});
+
 function applyList(r){
-  ROWS = r.rows || []; PRICE = r.price || 0;
+  const rows = r.rows || [];
+  if(SEEN){ rows.forEach(x=>{ x._new = !SEEN.has(x.email); }); }   // first load: nothing is "new"
+  SEEN = new Set(rows.map(x=>x.email));
+  ROWS = rows; PRICE = r.price || 0;
   PAYEE_ID = r.payee || "jeet";
   AUTO = r.auto || null;
   FULL = !!r.full; FULLMSG = r.fullMsg || "";
   PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
   render();
+  const toVerify = ROWS.filter(x=>x.status===ST.CLAIMED).length;
+  document.title = (toVerify ? "(" + toVerify + ") " : "") + "SEQUEL 26 — Admin";
+  $("#updatedAt").textContent = "Updated " + new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}) + " · refreshes every minute";
 }
 
 /* ---------- render ---------- */
@@ -494,7 +517,7 @@ function render(){
     }
     actions += `<button type="button" class="mini del-btn" data-row="${r.row}" data-do="delete">Delete</button>`;
     return `<tr>
-      <td class="nm">${esc(r.name)} ${r.checkedIn?'<span class="pill in">In</span>':""}</td>
+      <td class="nm">${esc(r.name)} ${r._new?'<span class="pill pending">new</span>':""}${r.checkedIn?'<span class="pill in">In</span>':""}</td>
       <td class="mono">${esc(r.batch)}</td>
       <td class="mono">${esc(r.roll)}</td>
       <td class="mono">${esc(r.phone)}</td>

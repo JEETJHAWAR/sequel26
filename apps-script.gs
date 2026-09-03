@@ -233,6 +233,7 @@ function actionRegister(b) {
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
     _rows = null;                            // the memo no longer has every row
+    cacheDrop('autoTally');                  // one more pending entry
     return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
 
   } finally {
@@ -288,6 +289,7 @@ function actionSubmitPayment(b) {
     if (link) writeCell(sheet, row, 'shot', link);
     writeCell(sheet, row, 'status', S.CLAIMED);
     writeCell(sheet, row, 'updated', new Date());
+    cacheDrop('autoTally');
     autoCloseIfFull(sheet);                 // auto-collect counts paid entries: this may be the last one
 
     notifyOrganiser(sheet, row, utr);
@@ -425,6 +427,7 @@ function adminDecide(b) {
       writeCell(sheet, row, 'verifiedAt', now);
       if (b.method) writeCell(sheet, row, 'notes', String(b.method));
       writeCell(sheet, row, 'updated', now);
+      cacheDrop('autoTally');
       emailApproved(sheet, row, code);
       autoCloseIfFull(sheet);               // a cash "Mark paid" counts too
       return { ok: true, code: code };
@@ -434,6 +437,7 @@ function adminDecide(b) {
       writeCell(sheet, row, 'status', S.REJECTED);
       writeCell(sheet, row, 'notes', String(b.reason || 'Payment could not be matched.'));
       writeCell(sheet, row, 'updated', now);
+      cacheDrop('autoTally');
       emailRejected(sheet, row, String(b.reason || ''));
       return { ok: true };
     }
@@ -478,6 +482,7 @@ function adminDelete(b) {
     }
     sheet.deleteRow(row);
     _rows = null;
+    cacheDrop('autoTally');
     return { ok: true };
   } finally {
     try { lock.releaseLock(); } catch (ignore) {}
@@ -603,6 +608,24 @@ function setProp(k, v) {
   PropertiesService.getScriptProperties().setProperty(k, v);
   allProps()[k] = v;
   _payeeMemo = '';
+  cacheDrop('autoTally');        // rotation settings may have changed
+}
+
+/* ---- 20-second tally cache ------------------------------------------
+   Page loads and pause polls only need the CURRENT collector, not the
+   student's row, so they would otherwise pay for a full sheet read purely
+   to count paid entries. The tally is cached for 20 s and dropped by every
+   write that can change it; a request that has already read the sheet
+   always recomputes, so registrations are never assigned from stale data. */
+function cacheGet(k) {
+  try { var v = CacheService.getScriptCache().get(k); return v ? JSON.parse(v) : null; }
+  catch (e) { return null; }
+}
+function cachePut(k, obj, secs) {
+  try { CacheService.getScriptCache().put(k, JSON.stringify(obj), secs); } catch (e) {}
+}
+function cacheDrop(k) {
+  try { CacheService.getScriptCache().remove(k); } catch (e) {}
 }
 
 /** All data rows as objects keyed by COLS key, plus .row (sheet row number). */
@@ -658,29 +681,44 @@ function autoInfo(sheet) {
   var per   = parseInt(prop('ROTATE_PER'), 10) || 15;
   var total = parseInt(prop('ROTATE_TOTAL'), 10) || 45;
   var since = prop('ROTATE_SINCE') ? new Date(prop('ROTATE_SINCE')) : null;
-  var counts = {}, sums = {}, pending = {}, paid = 0, collected = 0;
-  PAYEE_IDS.forEach(function (id) { counts[id] = 0; sums[id] = 0; pending[id] = 0; });
+  var sinceIso = since ? since.toISOString() : '';
+  var t = null;
   if (on && sheet) {
-    var rs = loadRows(sheet);
-    for (var i = 0; i < rs.length; i++) {
-      var created = rs[i].created, status = rs[i].status;
-      if (since && !(created instanceof Date && created >= since)) continue;
-      var id = normPayee(rs[i].payee);
-      if (status === S.CLAIMED || status === S.PAID) {
-        var amt = Number(rs[i].amount) || 0;
-        counts[id]++; sums[id] += amt; paid++; collected += amt;
-      } else if (status === S.STARTED) {
-        pending[id]++;
-      }
+    if (!_rows) t = cacheGet('autoTally');              // nothing read yet: a recent tally will do
+    if (t && t.since !== sinceIso) t = null;            // a different round: ignore it
+    if (!t) {
+      t = tallyRows(loadRows(sheet), since);
+      t.since = sinceIso;
+      cachePut('autoTally', t, 20);
     }
+  } else {
+    t = tallyRows([], null);
   }
   var current = PAYEE_IDS[PAYEE_IDS.length - 1];
   for (var j = 0; j < PAYEE_IDS.length; j++) {
-    if (counts[PAYEE_IDS[j]] < per) { current = PAYEE_IDS[j]; break; }
+    if (t.counts[PAYEE_IDS[j]] < per) { current = PAYEE_IDS[j]; break; }
   }
-  return { on: on, per: per, total: total, since: since ? since.toISOString() : '',
-           counts: counts, sums: sums, pending: pending, paid: paid, collected: collected,
+  return { on: on, per: per, total: total, since: sinceIso,
+           counts: t.counts, sums: t.sums, pending: t.pending, paid: t.paid, collected: t.collected,
            current: current, message: String(prop('ROTATE_PAUSE_MSG') || '') };
+}
+
+/** Paid / pending entries per collector among rows registered since `since`. */
+function tallyRows(rs, since) {
+  var counts = {}, sums = {}, pending = {}, paid = 0, collected = 0;
+  PAYEE_IDS.forEach(function (id) { counts[id] = 0; sums[id] = 0; pending[id] = 0; });
+  for (var i = 0; i < rs.length; i++) {
+    var created = rs[i].created, status = rs[i].status;
+    if (since && !(created instanceof Date && created >= since)) continue;
+    var id = normPayee(rs[i].payee);
+    if (status === S.CLAIMED || status === S.PAID) {
+      var amt = Number(rs[i].amount) || 0;
+      counts[id]++; sums[id] += amt; paid++; collected += amt;
+    } else if (status === S.STARTED) {
+      pending[id]++;
+    }
+  }
+  return { counts: counts, sums: sums, pending: pending, paid: paid, collected: collected };
 }
 
 function isAutoOn() { return prop('AUTO_ROTATE') === '1'; }

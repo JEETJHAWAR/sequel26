@@ -119,9 +119,15 @@ the UPI reference number is the thing that matters.
 `appendRow`/`deleteRow` drop the memo. Never call `getRange(...).setValue`
 directly for a data cell — go through `writeCell` or later reads in the same
 request will be stale. `adminLogin` returns the full `adminList` payload so
-the panel opens in one round trip. Both pages' `api()` retry twice (with a
-40 s timeout per attempt) because Apps Script sometimes answers with an HTML
-error page, especially in the minute after a redeploy.
+the panel opens in one round trip, then refreshes itself every minute and on
+tab focus (rows unseen since the last load get a "new" pill; the tab title
+carries the to-verify count). Both pages' `api()` retry twice (with a 40 s
+timeout per attempt) because Apps Script sometimes answers with an HTML error
+page, especially in the minute after a redeploy. In auto-collect mode the
+paid-entry tally is cached in `CacheService` for 20 s (`autoTally`) so a plain
+page-load `price` call needs no sheet read; every write that can change the
+tally drops the cache, and a request that already read the sheet always
+recomputes, so a registration is never assigned from a stale tally.
 
 ## Hard rules
 
