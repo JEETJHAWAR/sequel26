@@ -19,7 +19,7 @@ Static site on GitHub Pages. **No build step, no npm, no bundler, no payment gat
 | `pass.js` | Draws the pass on canvas; exports PNG and a hand-built PDF. |
 | `apps-script.gs` | The backend. Pasted into Google Apps Script, NOT served by the site. |
 | `fonts/` | Three self-hosted WOFF2 files. No CDN fallback — do not delete. |
-| `images/` | `hero.jpg` (hero background), `campus-*.jpg` (section backdrops under a dark veil), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`. |
+| `images/` | `hero.jpg` (hero background), `campus-*.jpg` (section backdrops under a dark veil), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`; Niveditha: `upi-qr-niveditha-800/1000/1200.jpeg`. |
 
 ## Status flow
 
@@ -35,11 +35,29 @@ The repo is **public**. The admin password lives in Apps Script Properties
 (`ADMIN_PASSWORD`) and is checked server-side by `guard()`. The ticket price lives
 there too (`TICKET_PRICE`) so the admin panel can change it without a redeploy.
 
-Payments can be collected by **two people** — Jeet (`9329641726@upi`) or Anshika
-(`anshika.chauhan258@okhdfcbank`) — so one account never hits its daily UPI
-receiving limit. The active collector lives in Script Properties (`PAYEE`), set by
-`adminSetPayee` from the admin panel's "Collecting" button; the site's QR, UPI ID
-and pay button all follow it. The `PAYEES` map exists in `index.html` (UPI ID +
+Payments can be collected by **three people** — Jeet (`9329641726@upi`), Anshika
+(`anshika.chauhan258@okhdfcbank`) or Niveditha (`9749000372@upi`) — so one
+account never hits its daily UPI receiving limit. The active collector lives in
+Script Properties (`PAYEE`), set by `adminSetPayee` from the admin panel's
+"Collecting" button; the site's QR, UPI ID and pay button all follow it.
+
+**Auto-collect** (same dialog, "Rotate automatically"): `adminSetAuto` stores
+`AUTO_ROTATE`, `ROTATE_PER` (default 15), `ROTATE_TOTAL` (default 45),
+`ROTATE_SINCE` and `ROTATE_PAUSE_MSG`. While on, `getPayee()` is computed from
+the sheet on every request: rows registered since `ROTATE_SINCE` that are not
+`Rejected` are counted per collector, and the collector handed out is the first
+in `PAYEE_IDS` order still under `ROTATE_PER`. Once `ROTATE_TOTAL` such rows
+exist, the registration that filled the last slot **closes the batch**
+(`autoCloseIfFull` sets `REG_FULL` + `FULL_MESSAGE`). This is deliberately
+NOT the pause: new emails are refused with the message, but every existing
+row can still come back, get its quote and pay — the QR stays up. The admin
+banner's "Reopen registrations" (`adminSetFull` false) clears the flag and,
+with auto still on, starts the next round (`ROTATE_SINCE` = now); "Restart
+count" in the Collecting dialog does the same. Hand-picking a collector turns
+auto off. In auto mode a re-registering row keeps the collector it was handed
+(its slot was counted); by hand, a switch re-quotes everyone still unpaid.
+Counts are registrations, not verified payments — the point is to spread QR
+assignments, and verification lags. The `PAYEES` map exists in `index.html` (UPI ID +
 name + QR per tier) and `admin.html` (labels), with the id whitelist `PAYEE_IDS`
 in `apps-script.gs`. **Adding a payee means updating all three.** Each sheet row
 records who it paid in the `Paid to` column (empty = Jeet, pre-column rows), set

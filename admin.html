@@ -82,6 +82,12 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
 /* tier / payee pickers inside their dialogs */
 #priceDlg{max-width:460px}
 #tierSeg,#payeeSeg{margin-bottom:18px}
+#payeeDlg{max-width:540px}
+.autobox{margin-top:4px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.2)}
+.autobox .autohead{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:15px;font-weight:600}
+.autobox input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold);margin:0}
+.autobox input[type=number]{width:72px;display:inline-block;padding:5px 8px;font-size:14px;margin:0 2px;text-align:center}
+.autobox .hint{font-size:.85rem;line-height:1.7}
 #tierSeg button,#payeeSeg button{min-width:0;padding:13px 8px;font-size:1.05rem}
 .mini.pause-on{background:var(--hot-dim);box-shadow:inset 0 0 0 1.5px var(--hot);color:var(--warn)}
 </style>
@@ -126,6 +132,17 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
       <p id="pausedBannerMsg"></p>
       <p style="color:var(--muted-2)">New sign-ups are blocked and the payment QR is off the site.
       Anyone who already paid can still submit their reference, and paid students can still open their pass.</p>
+    </div>
+
+    <div class="notice warn hidden" id="fullBanner" style="margin:0 0 20px">
+      <b>Registrations are closed — this batch is full.</b>
+      <p id="fullBannerMsg"></p>
+      <p style="color:var(--muted-2)">Auto-collect reached its total. New sign-ups are refused; everyone already
+      registered can still come back and pay. When you are ready for the next batch (change the tier first if
+      you want), reopen — that also starts a fresh round of counts.</p>
+      <div class="row" style="display:flex;gap:9px;flex-wrap:wrap;margin-top:12px">
+        <button type="button" class="mini ok-btn" id="reopenBtn">Reopen registrations</button>
+      </div>
     </div>
 
     <div class="notice bad hidden" id="dupeBanner" style="margin:0 0 20px">
@@ -193,14 +210,29 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
 <dialog id="payeeDlg">
   <h3>Who collects payments</h3>
   <div class="seg" id="payeeSeg"></div>
-  <p class="hint" style="margin-bottom:18px">
-    The site's QR, UPI ID and pay button all switch to this account for everyone who
-    reaches the payment step from now on. Flip it when one account is nearing its
-    daily UPI receiving limit. Each row records who it paid — verify against
-    that person's account, not whoever is collecting today.
+  <p class="hint" style="margin:-8px 0 14px">
+    Pick one by hand — the site's QR, UPI ID and pay button switch for everyone who reaches
+    the payment step from now on — or let the site rotate through them in this order.
+    Each row records who it paid; verify against that person's account.
   </p>
-  <div style="display:flex;gap:10px">
+  <div class="autobox">
+    <label class="autohead" for="autoOn"><input type="checkbox" id="autoOn"> Rotate automatically</label>
+    <p class="hint" style="margin:8px 0 10px">
+      Hands the accounts out in the order above,
+      <input type="number" id="autoPer" min="1" max="1000" step="1"> registrations each, and pauses the
+      site once <input type="number" id="autoTotal" min="1" max="10000" step="1"> have registered in total.
+      Picking an account by hand switches this off. Resuming after the auto-pause starts a fresh count.
+    </p>
+    <div class="field" style="margin:0 0 10px">
+      <label for="autoMsg">Message shown when it pauses</label>
+      <textarea id="autoMsg" rows="2" maxlength="300"
+        placeholder="This batch of passes is full — the next batch opens soon."></textarea>
+    </div>
+    <p class="hint" id="autoProgress" style="margin:0"></p>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px">
     <button type="button" class="btn" id="savePayee">Save</button>
+    <button type="button" class="btn ghost hidden" id="autoRestart">Restart count</button>
     <button type="button" class="btn ghost" id="cancelPayee">Cancel</button>
   </div>
 </dialog>
@@ -244,6 +276,8 @@ let ROWS = [];
 let PRICE = 0;
 let PAUSED = false;
 let PAUSEMSG = "";
+let FULL = false;           // auto-collect closed the batch (new registrations refused)
+let FULLMSG = "";
 let filter = "verify";
 const ST = { STARTED:"Awaiting payment", CLAIMED:"Verifying", PAID:"Paid", REJECTED:"Rejected" };
 
@@ -263,10 +297,12 @@ const tierLabel = p => {
    holds each one's UPI ID and QR images) and PAYEE_IDS in apps-script.gs.
    Rows with an empty payee predate the column: they all collected to Jeet. */
 const PAYEES = [
-  { id: "jeet",    label: "Jeet"    },
-  { id: "anshika", label: "Anshika" }
+  { id: "jeet",      label: "Jeet"      },
+  { id: "anshika",   label: "Anshika"   },
+  { id: "niveditha", label: "Niveditha" }
 ];
 let PAYEE_ID = "jeet";
+let AUTO = null;            // auto-collect state from the server, null = off / old backend
 const payeeLabel = id => {
   const p = PAYEES.find(p => p.id === String(id || "jeet"));
   return p ? p.label : String(id);
@@ -329,6 +365,8 @@ async function load(){
     if(!r.ok) throw new Error(r.error || "Failed");
     ROWS = r.rows || []; PRICE = r.price || 0;
     PAYEE_ID = r.payee || "jeet";
+    AUTO = r.auto || null;
+    FULL = !!r.full; FULLMSG = r.fullMsg || "";
     PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
     render();
   }catch(err){
@@ -382,12 +420,21 @@ function pillFor(st){
 
 function paintControls(){
   $("#priceBtn").textContent = PRICE ? rupees(PRICE) + " · " + tierLabel(PRICE) : "Ticket price";
-  $("#payeeBtn").textContent = "Collecting · " + payeeLabel(PAYEE_ID);
+  const autoOn = !!(AUTO && AUTO.on);
+  $("#payeeBtn").textContent = autoOn
+    ? "Auto · " + payeeLabel(AUTO.current) + " " + (AUTO.counts[AUTO.current]||0) + "/" + AUTO.per
+      + " · " + AUTO.assigned + "/" + AUTO.total
+    : "Collecting · " + payeeLabel(PAYEE_ID);
+  $("#payeeBtn").classList.toggle("on", autoOn);
   $("#pauseBtn").textContent = PAUSED ? "Paused — resume" : "Pause entries";
   $("#pauseBtn").classList.toggle("pause-on", PAUSED);
   $("#pausedBanner").classList.toggle("hidden", !PAUSED);
   $("#pausedBannerMsg").textContent = PAUSEMSG
     ? 'Site message: "' + PAUSEMSG + '"'
+    : "No custom message set — the site shows the default text.";
+  $("#fullBanner").classList.toggle("hidden", !FULL);
+  $("#fullBannerMsg").textContent = FULLMSG
+    ? 'Site message: "' + FULLMSG + '"'
     : "No custom message set — the site shows the default text.";
 
   const byRoll = {};
@@ -539,22 +586,67 @@ function markPayee(id){
   $$("#payeeSeg button").forEach(b =>
     b.setAttribute("aria-pressed", String(b.dataset.id === id)));
 }
-$$("#payeeSeg button").forEach(b => b.addEventListener("click", ()=>markPayee(b.dataset.id)));
+$$("#payeeSeg button").forEach(b => b.addEventListener("click", ()=>{
+  markPayee(b.dataset.id);
+  $("#autoOn").checked = false;          // a hand-picked account means: not auto
+}));
+
+function paintAutoProgress(){
+  const a = AUTO;
+  if(!(a && a.on)){ $("#autoProgress").textContent = "Off — the account picked above collects everything."; return; }
+  const since = a.since ? new Date(a.since).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}) : "";
+  $("#autoProgress").textContent = "This round: " + PAYEES.map(p=>p.label + " " + (a.counts[p.id]||0) + "/" + a.per).join(" · ")
+    + " — " + a.assigned + " of " + a.total + " registered" + (since ? " since " + since : "") + ".";
+}
 
 $("#payeeBtn").addEventListener("click", ()=>{
-  markPayee(PAYEE_ID);
+  const a = AUTO || {};
+  markPayee(a.on ? a.current : PAYEE_ID);
+  $("#autoOn").checked   = !!a.on;
+  $("#autoPer").value    = a.per   || 15;
+  $("#autoTotal").value  = a.total || 45;
+  $("#autoMsg").value    = a.message || "";
+  $("#autoRestart").classList.toggle("hidden", !a.on);
+  paintAutoProgress();
   $("#payeeDlg").showModal();
 });
 $("#cancelPayee").addEventListener("click", ()=>$("#payeeDlg").close());
-$("#savePayee").addEventListener("click", async ()=>{
-  const btn = $("#savePayee");
+
+function autoPayload(extra){
+  return Object.assign({action:"adminSetAuto", on:true,
+    per: parseInt($("#autoPer").value, 10), total: parseInt($("#autoTotal").value, 10),
+    message: $("#autoMsg").value.trim()}, extra || {});
+}
+async function savePayeeDialog(btn, payload){
+  const was = btn.textContent;
   btn.disabled = true; btn.innerHTML = '<i class="spin"></i>Saving…';
   try{
-    const r = await api({action:"adminSetPayee", payee: pickedPayee});
-    if(r.ok){ PAYEE_ID = r.payee; $("#payeeDlg").close(); render(); }
+    const r = await api(payload);
+    if(r.ok){
+      if(r.auto !== undefined) AUTO = r.auto;
+      if(r.payee) PAYEE_ID = r.payee;
+      $("#payeeDlg").close(); await load();
+    }else alert(r.error || "Failed");
+  }catch(err){ alert("Couldn't reach the server."); }
+  finally{ btn.disabled=false; btn.textContent=was; }
+}
+$("#savePayee").addEventListener("click", e=>{
+  savePayeeDialog(e.target, $("#autoOn").checked ? autoPayload() : {action:"adminSetPayee", payee: pickedPayee});
+});
+$("#reopenBtn").addEventListener("click", async e=>{
+  if(!confirm("Reopen registrations now? Counts reset and collection starts again from " + PAYEES[0].label + " (if auto-collect is on).")) return;
+  const btn = e.target; btn.disabled = true; btn.innerHTML = '<i class="spin"></i>';
+  try{
+    const r = await api({action:"adminSetFull", full:false});
+    if(r.ok){ FULL = false; if(r.auto) AUTO = r.auto; await load(); }
     else alert(r.error || "Failed");
   }catch(err){ alert("Couldn't reach the server."); }
-  finally{ btn.disabled=false; btn.textContent="Save"; }
+  finally{ btn.disabled = false; btn.textContent = "Reopen registrations"; }
+});
+
+$("#autoRestart").addEventListener("click", e=>{
+  if(!confirm("Start a new round now?\n\nEvery account's count goes back to 0 and collection starts again from " + PAYEES[0].label + ". The site is not un-paused by this — use Pause entries for that.")) return;
+  savePayeeDialog(e.target, autoPayload({restart:true}));
 });
 
 /* ---------- pause ---------- */

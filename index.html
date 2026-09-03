@@ -76,8 +76,8 @@ h1 .yr{font-size:.34em;color:var(--paper);-webkit-text-fill-color:var(--paper);f
 #register .wrap{text-align:center}
 #register .eyebrow{justify-content:center}
 #register .lede{margin-inline:auto}
-#register .card,#register .waiting,#register .passwrap,#register #pausedNote{margin-inline:auto}
-#register .card,#register .passwrap,#register #pausedNote{text-align:left}
+#register .card,#register .waiting,#register .passwrap,#register #pausedNote,#register #fullNote{margin-inline:auto}
+#register .card,#register .passwrap,#register #pausedNote,#register #fullNote{text-align:left}
 .two{display:grid;gap:clamp(26px,5vw,60px);grid-template-columns:1fr}
 @media(min-width:900px){.two{grid-template-columns:1fr 1fr;align-items:start}}
 .two p{margin:0 0 15px;color:var(--muted)}
@@ -314,6 +314,14 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
     <div class="notice warn hidden" id="pausedNote" style="max-width:660px;margin:0">
       <b>Registrations are paused right now.</b>
       <p id="pausedMsg">Check back in a little while.</p>
+    </div>
+
+    <!-- BATCH FULL — closed to new registrations; the form stays so anyone
+         already registered can come back and pay -->
+    <div class="notice warn hidden" id="fullNote" style="max-width:660px;margin:0 auto 22px">
+      <b>This batch is full — new registrations are closed.</b>
+      <p id="fullMsg"></p>
+      <p>Already registered? Fill in the same details below (same email) to continue to payment.</p>
     </div>
 
     <!-- STEP 1 -->
@@ -608,6 +616,12 @@ const PAYEES = {
     qrs: { 800:  "images/upi-qr-anshika-800.jpeg",
            1000: "images/upi-qr-anshika-1000.jpeg",
            1200: "images/upi-qr-anshika-1200.jpeg" }
+  },
+  niveditha: {
+    upiId: "9749000372@upi", upiName: "Ms BHIMUNI NIVEDITHA RAO",
+    qrs: { 800:  "images/upi-qr-niveditha-800.jpeg",
+           1000: "images/upi-qr-niveditha-1000.jpeg",
+           1200: "images/upi-qr-niveditha-1200.jpeg" }
   }
 };
 
@@ -668,6 +682,13 @@ function setPaused(on, msg){
   $(".paygrid").classList.toggle("hidden", PAUSED);
 }
 
+/* Auto-collect closed the batch: new registrations are refused server-side,
+   the form stays so existing registrants can get back to their payment. */
+function setFull(on, msg){
+  if(msg) $("#fullMsg").textContent = msg;
+  $("#fullNote").classList.toggle("hidden", !on);
+}
+
 /* Re-check while it matters: on the payment step (a pause mid-flow removes the
    QR from screens already showing it, and the quote follows the row) and while
    the pause notice is up (resuming brings the form back by itself). */
@@ -716,6 +737,7 @@ function applyServerState(d){
     }
   }
   setPaused(!!d.paused, d.pauseMsg);
+  setFull(!!d.full, d.fullMsg);
 }
 
 /* Ask the server for the current state — with the student's email while a
@@ -907,6 +929,13 @@ async function saveDetails(){
       if(r.paused){                                  // paused after the page loaded
         setPaused(true, r.error);
         $("#pausedNote").scrollIntoView({behavior:"smooth", block:"center"});
+        return;
+      }
+      if(r.full){                                    // batch filled up: new entries only are refused
+        setFull(true, r.error);
+        $("#detailsErrorMsg").textContent = "New registrations are closed for this batch. Already registered? Use exactly the email you registered with.";
+        $("#detailsError").classList.remove("hidden");
+        $("#fullNote").scrollIntoView({behavior:"smooth", block:"center"});
         return;
       }
       $("#detailsErrorMsg").textContent = r.error || "Try again in a moment.";

@@ -69,7 +69,7 @@ const COLS = [
 /** Who can collect payments. Mirrored in PAYEES in index.html and admin.html —
     if you add someone, add them in all three places. Rows with an empty
     'Paid to' predate this column: they were all collected by jeet. */
-const PAYEE_IDS = ['jeet', 'anshika'];
+const PAYEE_IDS = ['jeet', 'anshika', 'niveditha'];
 
 const C = {};
 COLS.forEach(function (c, i) { C[c[1]] = i + 1; });
@@ -95,6 +95,8 @@ function doPost(e) {
       case 'adminSetPrice':  return json(guard(body, adminSetPrice));
       case 'adminSetPause':  return json(guard(body, adminSetPause));
       case 'adminSetPayee':  return json(guard(body, adminSetPayee));
+      case 'adminSetAuto':   return json(guard(body, adminSetAuto));
+      case 'adminSetFull':   return json(guard(body, adminSetFull));
       case 'adminDecide':    return json(guard(body, adminDecide));
       case 'adminUpdate':    return json(guard(body, adminUpdate));
       case 'adminDelete':    return json(guard(body, adminDelete));
@@ -119,7 +121,8 @@ function doGet() {
     student's own row: a quote already on screen must follow the row, never
     the live properties, because the row is what gets verified against. */
 function actionPrice(b) {
-  var out = { ok: true, price: getPrice(), payee: getPayee(), paused: isPaused(), pauseMsg: getPauseMessage() };
+  var out = { ok: true, price: getPrice(), payee: getPayee(), paused: isPaused(), pauseMsg: getPauseMessage(),
+              full: isFull(), fullMsg: getFullMessage() };
   var email = String(b.email || '').trim().toLowerCase();
   if (email) {
     var sheet = getSheet();
@@ -170,6 +173,12 @@ function actionRegister(b) {
       return { ok: true, pass: passFromRow(sheet, row) };
     }
 
+    // Auto-collect filled its quota: closed to NEW registrations only. Anyone
+    // already registered can still come back, get their quote and pay.
+    if (row < 1 && isFull()) {
+      return { ok: false, full: true, error: getFullMessage() };
+    }
+
     // One person, one registration. Email is the key, but a roll number
     // must not appear under a second email either — that is how people end
     // up registering (and paying) twice. A row that already holds this roll
@@ -197,7 +206,10 @@ function actionRegister(b) {
       // being verified keeps its original amount and payee.
       if (status === S.STARTED || status === S.REJECTED) {
         sheet.getRange(row, C.amount).setValue(getPrice());
-        sheet.getRange(row, C.payee).setValue(getPayee());
+        // Auto-collect: a row keeps the collector it was handed (that slot was
+        // counted). By hand, a switch applies to everyone still unpaid.
+        var keepPayee = isAutoOn() && String(readCell(sheet, row, 'payee') || '').trim() !== '';
+        if (!keepPayee) sheet.getRange(row, C.payee).setValue(getPayee());
       }
       sheet.getRange(row, C.updated).setValue(now);
       // Echo the ROW, never the live properties: the screen must show exactly
@@ -216,6 +228,7 @@ function actionRegister(b) {
       consent: now
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
+    autoCloseIfFull(sheet);                 // auto-collect: this may have been the last slot
     return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
 
   } finally {
@@ -325,7 +338,8 @@ function adminList() {
     }
   }
   return { ok: true, rows: rows, price: getPrice(), payee: getPayee(), event: EVENT_NAME,
-           statuses: S, paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || '') };
+           statuses: S, paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || ''),
+           full: isFull(), fullMsg: String(prop('FULL_MESSAGE') || ''), auto: autoInfo(sheet) };
 }
 
 function adminSetPrice(b) {
@@ -343,8 +357,52 @@ function adminSetPayee(b) {
   if (PAYEE_IDS.indexOf(id) < 0) {
     return { ok: false, error: 'Unknown payee. Allowed: ' + PAYEE_IDS.join(', ') + '.' };
   }
-  PropertiesService.getScriptProperties().setProperty('PAYEE', id);
-  return { ok: true, payee: id };
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('PAYEE', id);
+  props.setProperty('AUTO_ROTATE', '');   // a hand-picked collector ends auto-collect
+  return { ok: true, payee: id, auto: autoInfo(null) };
+}
+
+/** Auto-collect on/off: hand out collectors in PAYEE_IDS order, ROTATE_PER
+    registrations each, and pause once ROTATE_TOTAL have registered. Turning
+    it on (or restart=true) starts a fresh count from now; picking a collector
+    by hand (adminSetPayee) turns it off. */
+function adminSetAuto(b) {
+  var props = PropertiesService.getScriptProperties();
+  var on = (b.on === true || b.on === 'true');
+  if (!on) {
+    props.setProperty('AUTO_ROTATE', '');
+    props.setProperty('REG_FULL', '');      // "batch full" only means something while rotating
+    return { ok: true, auto: autoInfo(null), payee: normPayee(prop('PAYEE')) };
+  }
+  var per = parseInt(b.per, 10), total = parseInt(b.total, 10);
+  if (!per || per < 1 || per > 1000)        return { ok: false, error: 'Entries per account must be between 1 and 1000.' };
+  if (!total || total < 1 || total > 10000) return { ok: false, error: 'The pause-after total must be between 1 and 10000.' };
+  var wasOn   = props.getProperty('AUTO_ROTATE') === '1';
+  var restart = (b.restart === true || b.restart === 'true');
+  props.setProperty('AUTO_ROTATE', '1');
+  props.setProperty('ROTATE_PER', String(per));
+  props.setProperty('ROTATE_TOTAL', String(total));
+  props.setProperty('ROTATE_PAUSE_MSG', String(b.message || '').trim().slice(0, 300));
+  if (!wasOn || restart || !props.getProperty('ROTATE_SINCE')) {
+    props.setProperty('ROTATE_SINCE', new Date().toISOString());
+    props.setProperty('REG_FULL', '');      // a fresh round reopens registrations
+  }
+  _payeeMemo = '';
+  var info = autoInfo(getSheet());
+  return { ok: true, auto: info, payee: info.current };
+}
+
+/** Reopen registrations after auto-collect closed them. With auto still on
+    this also starts the next round, otherwise the next registration would
+    close the site again straight away. */
+function adminSetFull(b) {
+  var props = PropertiesService.getScriptProperties();
+  var full = (b.full === true || b.full === 'true');
+  props.setProperty('REG_FULL', full ? '1' : '');
+  if (!full && prop('AUTO_ROTATE') === '1') props.setProperty('ROTATE_SINCE', new Date().toISOString());
+  _payeeMemo = '';
+  return { ok: true, full: full, auto: autoInfo(getSheet()) };
 }
 
 /** Pause or resume new registrations, with the message the site shows while
@@ -546,7 +604,68 @@ function normPayee(v) {
   return PAYEE_IDS.indexOf(id) >= 0 ? id : PAYEE_IDS[0];   // empty = pre-column row = jeet
 }
 
-function getPayee() { return normPayee(prop('PAYEE')); }
+/* Memoised per execution: in auto-collect mode the answer comes from a scan
+   of the sheet, and one request must hand out one consistent collector. */
+var _payeeMemo = '';
+function getPayee() {
+  if (_payeeMemo) return _payeeMemo;
+  _payeeMemo = (prop('AUTO_ROTATE') === '1') ? autoInfo(getSheet()).current : normPayee(prop('PAYEE'));
+  return _payeeMemo;
+}
+
+/** Auto-collect state. Counts rows registered since ROTATE_SINCE that were
+    not rejected, per collector; `current` is the first collector in
+    PAYEE_IDS order still under ROTATE_PER (the last one once all are full). */
+function autoInfo(sheet) {
+  var on    = prop('AUTO_ROTATE') === '1';
+  var per   = parseInt(prop('ROTATE_PER'), 10) || 15;
+  var total = parseInt(prop('ROTATE_TOTAL'), 10) || 45;
+  var since = prop('ROTATE_SINCE') ? new Date(prop('ROTATE_SINCE')) : null;
+  var counts = {}, assigned = 0;
+  PAYEE_IDS.forEach(function (id) { counts[id] = 0; });
+  if (on && sheet) {
+    var last = sheet.getLastRow();
+    if (last > 1) {
+      var vals = sheet.getRange(2, 1, last - 1, COLS.length).getValues();
+      for (var i = 0; i < vals.length; i++) {
+        var created = vals[i][C.created - 1], status = vals[i][C.status - 1];
+        if (since && !(created instanceof Date && created >= since)) continue;
+        if (status === S.REJECTED) continue;
+        counts[normPayee(vals[i][C.payee - 1])]++;
+        assigned++;
+      }
+    }
+  }
+  var current = PAYEE_IDS[PAYEE_IDS.length - 1];
+  for (var j = 0; j < PAYEE_IDS.length; j++) {
+    if (counts[PAYEE_IDS[j]] < per) { current = PAYEE_IDS[j]; break; }
+  }
+  return { on: on, per: per, total: total, since: since ? since.toISOString() : '',
+           counts: counts, assigned: assigned, current: current,
+           message: String(prop('ROTATE_PAUSE_MSG') || '') };
+}
+
+function isAutoOn() { return prop('AUTO_ROTATE') === '1'; }
+function isFull()   { return prop('REG_FULL') === '1'; }
+
+function getFullMessage() {
+  return String(prop('FULL_MESSAGE') || '').trim() ||
+         'This batch of passes is full — the next batch opens soon.';
+}
+
+/** Called right after a new row is added: once the round's total is reached,
+    close the site to NEW registrations (a flag, so a later deletion or
+    rejection cannot silently reopen it). Existing rows keep working: they can
+    still return, be quoted and pay — that is the whole point of the batch. */
+function autoCloseIfFull(sheet) {
+  if (!isAutoOn() || isFull()) return;
+  var st = autoInfo(sheet);
+  if (st.assigned >= st.total) {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty('REG_FULL', '1');
+    props.setProperty('FULL_MESSAGE', st.message);
+  }
+}
 
 function getPauseMessage() {
   return String(prop('PAUSE_MESSAGE') || '').trim() ||
