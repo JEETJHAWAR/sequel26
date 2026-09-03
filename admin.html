@@ -432,7 +432,7 @@ function render(){
       <td class="mono">${esc(r.utr) || "—"}</td>
       <td>${proof}</td>
       <td class="code">${esc(r.code) || "—"}</td>
-      <td class="mono">${r.amount ? rupees(r.amount) : "—"}</td>
+      <td class="mono">${r.amount ? rupees(r.amount) : "—"}${/CHECK:/.test(r.notes||"") ? ` <span class="pill failed" title="${esc(r.notes)}">check</span>` : ""}</td>
       <td class="mono">${esc(payeeLabel(r.payee))}</td>
       <td class="act">${actions}</td></tr>`;
   }).join("");
@@ -456,7 +456,7 @@ $("#rows").addEventListener("click", async e=>{
 
   if(what === "approve"){
     const msg = rec.status===ST.CLAIMED
-      ? `Approve this payment?\n\n${rec.name}\nUPI ref: ${rec.utr}\nAmount: ${rupees(rec.amount)}\n\nCheck it in your bank app first. This issues a pass code and emails them.`
+      ? `Approve this payment?\n\n${rec.name}\nUPI ref: ${rec.utr}\nAmount: ${rupees(rec.amount)} · ${payeeLabel(rec.payee)}${/CHECK:/.test(rec.notes||"") ? "\n\n!! " + rec.notes : ""}\n\nCheck it in that person's bank app first. This issues a pass code and emails them.`
       : `No UPI reference on file for ${rec.name}.\n\nOnly do this for cash or a payment you took another way. It issues a pass code and emails them.`;
     if(!confirm(msg)) return;
     payload = {action:"adminDecide", row, decision:"approve",

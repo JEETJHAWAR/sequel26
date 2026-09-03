@@ -85,7 +85,7 @@ function doPost(e) {
 
   try {
     switch (body.action) {
-      case 'price':          return json({ ok: true, price: getPrice(), payee: getPayee(), paused: isPaused(), pauseMsg: getPauseMessage() });
+      case 'price':          return json(actionPrice(body));
       case 'register':       return json(actionRegister(body));
       case 'submitPayment':  return json(actionSubmitPayment(body));
       case 'getPass':        return json(actionGetPass(body));
@@ -115,6 +115,20 @@ function doGet() {
 /* ==================================================================
    PUBLIC
    ================================================================== */
+/** Live price / collector / pause state — plus, when an email is given, that
+    student's own row: a quote already on screen must follow the row, never
+    the live properties, because the row is what gets verified against. */
+function actionPrice(b) {
+  var out = { ok: true, price: getPrice(), payee: getPayee(), paused: isPaused(), pauseMsg: getPauseMessage() };
+  var email = String(b.email || '').trim().toLowerCase();
+  if (email) {
+    var sheet = getSheet();
+    var row = findRow(sheet, email);
+    if (row > 0) out.row = rowQuote(rowValues(sheet, row));
+  }
+  return out;
+}
+
 function actionRegister(b) {
   if (b.website) return { ok: false, error: 'Rejected' };            // honeypot
 
@@ -178,15 +192,20 @@ function actionRegister(b) {
       sheet.getRange(row, C.roll).setValue(roll);
       sheet.getRange(row, C.phone).setValue(phone);
       if (!readCell(sheet, row, 'consent')) sheet.getRange(row, C.consent).setValue(now);
-      // Not paid yet — they're about to see the CURRENT price and QR, so the
-      // row must say what they'll actually pay and to whom. A row that already
-      // claimed a payment keeps its original amount and payee.
-      if (status === S.STARTED) {
+      // Not paid yet, or a rejected claim being retried: re-quote at the
+      // CURRENT price and collector and record that on the row. A row still
+      // being verified keeps its original amount and payee.
+      if (status === S.STARTED || status === S.REJECTED) {
         sheet.getRange(row, C.amount).setValue(getPrice());
         sheet.getRange(row, C.payee).setValue(getPayee());
       }
       sheet.getRange(row, C.updated).setValue(now);
-      return { ok: true, price: getPrice(), payee: getPayee(), status: status };
+      // Echo the ROW, never the live properties: the screen must show exactly
+      // what the organiser will verify against. A row already being verified
+      // sends the student to the waiting screen, not to a second QR.
+      var q = rowQuote(rowValues(sheet, row));
+      return { ok: true, price: q.amount || getPrice(), payee: q.payee, status: status,
+               claimed: q.claimed, utr: q.claimed ? q.utr : '' };
     }
 
     var price = getPrice();
@@ -226,6 +245,20 @@ function actionSubmitPayment(b) {
     var clash = findRowBy(sheet, 'utr', utr);
     if (clash > 0 && clash !== row) {
       return { ok: false, error: 'That reference number is already on another registration. Check you copied the right one, or message the organisers.' };
+    }
+
+    // What the screen showed vs what the row says. A mismatch (re-quoted from
+    // another device, or a tier change between quote and payment) is flagged
+    // in Notes so the organiser checks the right account for the right amount
+    // instead of verifying blind. The row is never overwritten from the client.
+    var o = rowValues(sheet, row);
+    var shownAmount = Number(b.amount) || 0;
+    var shownPayee  = String(b.payee || '').trim().toLowerCase();
+    if (shownAmount && (shownAmount !== Number(o.amount) || (shownPayee && shownPayee !== normPayee(o.payee)))) {
+      var flag = 'CHECK: screen showed Rs ' + shownAmount + ' to ' + (shownPayee || '?') +
+                 ' at submit, row says Rs ' + o.amount + ' to ' + normPayee(o.payee) + '.';
+      var notes = String(o.notes || '');
+      sheet.getRange(row, C.notes).setValue(notes ? notes + ' | ' + flag : flag);
     }
 
     var link = '';
@@ -508,10 +541,12 @@ function getPrice() {
 
 function isPaused() { return prop('REG_PAUSED') === '1'; }
 
-function getPayee() {
-  var id = String(prop('PAYEE') || '').trim().toLowerCase();
-  return PAYEE_IDS.indexOf(id) >= 0 ? id : PAYEE_IDS[0];
+function normPayee(v) {
+  var id = String(v || '').trim().toLowerCase();
+  return PAYEE_IDS.indexOf(id) >= 0 ? id : PAYEE_IDS[0];   // empty = pre-column row = jeet
 }
+
+function getPayee() { return normPayee(prop('PAYEE')); }
 
 function getPauseMessage() {
   return String(prop('PAUSE_MESSAGE') || '').trim() ||
@@ -555,11 +590,25 @@ function nextCode(sheet) {
   return 'SQL26-' + String(n + 1).padStart(3, '0');
 }
 
-function passFromRow(sheet, row) {
+/** Every cell of one row keyed by COLS key — a single read, so amount and
+    payee can never be torn between two writes. */
+function rowValues(sheet, row) {
   var v = sheet.getRange(row, 1, 1, COLS.length).getValues()[0];
   var o = {};
   COLS.forEach(function (c, i) { o[c[1]] = v[i]; });
+  return o;
+}
+
+function passFromRow(sheet, row) {
+  var o = rowValues(sheet, row);
   return { name: o.name, batch: o.batch, roll: o.roll, code: o.code, amount: o.amount, email: o.email };
+}
+
+/** What a quote on screen must follow. Booleans rather than status strings so
+    index.html does not become a third copy of S. */
+function rowQuote(o) {
+  return { paid: o.status === S.PAID, claimed: o.status === S.CLAIMED,
+           amount: Number(o.amount) || 0, payee: normPayee(o.payee), utr: String(o.utr || '') };
 }
 
 function json(obj) {

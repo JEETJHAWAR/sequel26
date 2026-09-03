@@ -48,6 +48,17 @@ same rule as the amount. Verification must check the account in that column.
 UPI IDs are public payment addresses — fine in a public repo, but Jeet's is a
 phone-number handle, so publishing the site publishes that number.
 
+**The sheet row is the truth for anything on the payment screen.** `actionRegister`
+echoes the row's amount/payee (re-quoting only rows still `Awaiting payment` or
+`Rejected`; a `Verifying` row sends the student to the waiting screen, not a
+second QR). While a quote is on screen the site re-checks `price` **with the
+student's email** every 45 s and whenever the tab regains focus, and redraws
+the quote if the row changed elsewhere (another device re-registered, paid, or
+claimed). A price/payee response never overwrites a quote already on screen.
+`submitPayment` carries the amount/payee the screen showed; a mismatch with
+the row is appended to Notes as `CHECK: …` and shown as a red "check" pill in
+the admin table — the row itself is never overwritten from the client.
+
 Prices are **tiered**: ₹800 "Early bird", ₹1000 "Regular", ₹1200 "Last call". The
 admin panel's price dialog picks a tier (or a custom amount); the number itself
 still lives in `TICKET_PRICE` in Script Properties. The `TIERS` map exists twice:

@@ -396,6 +396,10 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
         <p id="payPausedMsg"></p>
         <p>Already paid? Enter your reference number below — that still goes through.</p>
       </div>
+      <div class="notice warn hidden" id="quoteChanged" style="margin:0 0 22px">
+        <b>The amount or the account has changed.</b>
+        <p>Pay exactly what's shown now — that's what we'll check against.</p>
+      </div>
 
       <div class="payhead">
         <span id="payTier" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)">Amount</span>
@@ -632,6 +636,7 @@ const waHref = "https://wa.me/" + CONFIG.contactWhatsApp;
 let PRICE = CONFIG.fallbackPrice;
 let PAYEE = "jeet";                              // overwritten by the server
 const payee = () => PAYEES[PAYEE] || PAYEES.jeet;
+let lastDetails = null;                          // what the quote on screen was registered with
 function paintPrice(){
   const t = TIERS[PRICE];
   $("#priceLabel").textContent  = rupees(PRICE);
@@ -663,15 +668,12 @@ function setPaused(on, msg){
   $(".paygrid").classList.toggle("hidden", PAUSED);
 }
 
-/* Re-check the pause state while it matters: on the payment step (so an admin
-   pausing mid-flow removes the QR from screens already showing it) and while
-   the pause notice is up (so resuming brings the form back by itself). */
+/* Re-check while it matters: on the payment step (a pause mid-flow removes the
+   QR from screens already showing it, and the quote follows the row) and while
+   the pause notice is up (resuming brings the form back by itself). */
 setInterval(()=>{
-  if(!connected()) return;
   if(!PAUSED && $("#stepPay").classList.contains("hidden")) return;
-  api({action:"price"}).then(d=>{
-    if(d && d.ok){ PRICE = d.price; paintPrice(); if(d.payee) PAYEE = d.payee; setPaused(!!d.paused, d.pauseMsg); }
-  }).catch(()=>{});
+  syncState();
 }, 45000);
 
 /* =====================================================================
@@ -688,16 +690,44 @@ async function api(payload){
   return res.json();
 }
 
-if(connected()){
-  api({action:"price"}).then(d=>{
-    if(d && d.ok){
-      PRICE = d.price; paintPrice();
-      if(d.payee) PAYEE = d.payee;
-      if(d.paused) setPaused(true, d.pauseMsg);
-      preloadQR();
+/* Server state (price, collector, pause) is applied everywhere EXCEPT onto a
+   payment quote already on screen: once openPayment() has rendered an amount,
+   QR, button and UPI id from the register response, they stay exactly as the
+   sheet row has them, however late a price response arrives. */
+function applyServerState(d){
+  if(!(d && d.ok)) return;
+  const quoted = !$("#stepPay").classList.contains("hidden");
+  if(!quoted){
+    PRICE = d.price; paintPrice();
+    if(d.payee) PAYEE = d.payee;
+    preloadQR();
+  }else if(d.row && lastDetails){
+    // A quote on screen follows the student's own row: paid or claimed from
+    // another device -> move on; re-quoted there -> redraw and say so.
+    if(d.row.paid){
+      api({action:"getPass", email: lastDetails.email})
+        .then(r=>{ if(r.ok && r.pass) showPass(r.pass); }).catch(()=>{});
+    }else if(d.row.claimed){
+      showWait(d.row.utr, lastDetails.email);
+    }else if(d.row.amount && (d.row.amount !== PRICE || d.row.payee !== PAYEE)){
+      PRICE = d.row.amount; PAYEE = d.row.payee; paintPrice();
+      renderPayment(lastDetails);
+      $("#quoteChanged").classList.remove("hidden");
     }
-  }).catch(()=>{});
+  }
+  setPaused(!!d.paused, d.pauseMsg);
 }
+
+/* Ask the server for the current state — with the student's email while a
+   quote is on screen, so the answer includes their row. */
+function syncState(){
+  if(!connected()) return;
+  const quoted = !$("#stepPay").classList.contains("hidden");
+  api({action:"price", email: quoted && lastDetails ? lastDetails.email : ""})
+    .then(applyServerState).catch(()=>{});
+}
+
+if(connected()) syncState();
 
 /* Fetch the QR image now so the payment step appears with it already drawn. */
 function preloadQR(){
@@ -883,8 +913,10 @@ async function saveDetails(){
       $("#detailsError").classList.remove("hidden");
       return;
     }
+    if(r.claimed){ showWait(r.utr, d.email); return; }   // reference already sent: no second QR
     if(r.price){ PRICE = r.price; paintPrice(); }
     if(r.payee){ PAYEE = r.payee; }
+    lastDetails = d;
     openPayment(d);
   }catch(err){
     $("#detailsErrorMsg").textContent = "Couldn't reach the server. Check your connection and try again.";
@@ -897,7 +929,7 @@ async function saveDetails(){
 /* =====================================================================
    STEP 2 : payment
    ===================================================================== */
-function openPayment(d){
+function renderPayment(d){
   const p = payee();
   $("#payName").textContent  = d.name;
   $("#payBatch").textContent = d.batch;
@@ -921,7 +953,11 @@ function openPayment(d){
       document.querySelector(".qrwrap").classList.add("hidden");  // link + UPI ID still work
     }
   }
+}
 
+function openPayment(d){
+  renderPayment(d);
+  $("#quoteChanged").classList.add("hidden");
   $("#stepDetails").classList.add("hidden");
   $("#stepPay").classList.remove("hidden");
   $("#stepPay").scrollIntoView({behavior:"smooth", block:"start"});
@@ -938,8 +974,18 @@ function cameBack(){
   $("#backNote").classList.remove("hidden");
   $("#backNote").scrollIntoView({behavior:"smooth", block:"center"});
 }
-document.addEventListener("visibilitychange", cameBack);
-window.addEventListener("focus", cameBack);
+let lastSync = 0;
+function onReturn(){
+  if(document.visibilityState !== "visible") return;
+  // Back on a payment screen: make sure it still matches the row — another
+  // device may have re-registered or paid, or the tier may have moved.
+  if(!$("#stepPay").classList.contains("hidden") && Date.now() - lastSync > 8000){
+    lastSync = Date.now(); syncState();
+  }
+  cameBack();
+}
+document.addEventListener("visibilitychange", onReturn);
+window.addEventListener("focus", onReturn);
 
 $("#copyUpi").addEventListener("click", async ()=>{
   try{
@@ -1011,6 +1057,7 @@ async function submitPayment(){
       action:"submitPayment",
       email: details().email,
       utr,
+      amount: PRICE, payee: PAYEE,   // what the screen showed — the server flags any mismatch with the row
       shot:     shotData ? shotData.b64  : "",
       shotMime: shotData ? shotData.mime : ""
     });
@@ -1020,12 +1067,7 @@ async function submitPayment(){
       $("#payError").classList.remove("hidden");
       return;
     }
-    $("#waitRef").textContent = utr;
-    $("#waitEmail").textContent = "We'll email " + details().email;
-    $("#stepPay").classList.add("hidden");
-    $("#stepWait").classList.remove("hidden");
-    $("#sticky").classList.remove("show");
-    $("#stepWait").scrollIntoView({behavior:"smooth", block:"center"});
+    showWait(utr, details().email);
   }catch(err){
     $("#payErrorTitle").textContent = "Network problem";
     $("#payErrorMsg").textContent = "Couldn't reach the server. Your payment is fine — retry, or send the reference to the organisers.";
@@ -1033,6 +1075,17 @@ async function submitPayment(){
   }finally{
     loading(btn, false, "Submit for verification");
   }
+}
+
+/* The "sent for verification" screen — after a submit here, or when the row
+   turns out to have been claimed from another device. */
+function showWait(utr, email){
+  $("#waitRef").textContent   = utr || "on file";
+  $("#waitEmail").textContent = "We'll email " + email;
+  ["stepDetails","stepPay"].forEach(id=>$("#"+id).classList.add("hidden"));
+  $("#stepWait").classList.remove("hidden");
+  $("#sticky").classList.remove("show");
+  $("#stepWait").scrollIntoView({behavior:"smooth", block:"center"});
 }
 
 /* =====================================================================
