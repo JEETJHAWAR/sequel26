@@ -44,11 +44,16 @@ Script Properties (`PAYEE`), set by `adminSetPayee` from the admin panel's
 **Auto-collect** (same dialog, "Rotate automatically"): `adminSetAuto` stores
 `AUTO_ROTATE`, `ROTATE_PER` (default 15), `ROTATE_TOTAL` (default 45),
 `ROTATE_SINCE` and `ROTATE_PAUSE_MSG`. While on, `getPayee()` is computed from
-the sheet on every request: rows registered since `ROTATE_SINCE` that are not
-`Rejected` are counted per collector, and the collector handed out is the first
-in `PAYEE_IDS` order still under `ROTATE_PER`. Once `ROTATE_TOTAL` such rows
-exist, the registration that filled the last slot **closes the batch**
-(`autoCloseIfFull` sets `REG_FULL` + `FULL_MESSAGE`). This is deliberately
+the sheet on every request: rows registered since `ROTATE_SINCE` **count once
+their UPI reference is in** (`Verifying` or `Paid`; `Awaiting payment` rows
+are only "pending"), per collector, and the collector handed out to a new
+registration is the first in `PAYEE_IDS` order with fewer than `ROTATE_PER`
+paid entries. Once `ROTATE_TOTAL` paid entries exist, the submission (or cash
+"Mark paid") that reached it **closes the batch** (`autoCloseIfFull` sets
+`REG_FULL` + `FULL_MESSAGE`; default text in `getFullMessage()`). Because
+counting happens at payment, an account can end up somewhat over `ROTATE_PER`
+from registrations that were quoted before its 15th payment landed — the
+dialog shows those as "unpaid". This is deliberately
 NOT the pause: new emails are refused with the message, but every existing
 row can still come back, get its quote and pay — the QR stays up. The admin
 banner's "Reopen registrations" (`adminSetFull` false) clears the flag and,
@@ -56,8 +61,8 @@ with auto still on, starts the next round (`ROTATE_SINCE` = now); "Restart
 count" in the Collecting dialog does the same. Hand-picking a collector turns
 auto off. In auto mode a re-registering row keeps the collector it was handed
 (its slot was counted); by hand, a switch re-quotes everyone still unpaid.
-Counts are registrations, not verified payments — the point is to spread QR
-assignments, and verification lags. The `PAYEES` map exists in `index.html` (UPI ID +
+Counts are paid entries (reference submitted), not admin-verified ones —
+verification lags by hours and would let an account overshoot before approval. The `PAYEES` map exists in `index.html` (UPI ID +
 name + QR per tier) and `admin.html` (labels), with the id whitelist `PAYEE_IDS`
 in `apps-script.gs`. **Adding a payee means updating all three.** Each sheet row
 records who it paid in the `Paid to` column (empty = Jeet, pre-column rows), set

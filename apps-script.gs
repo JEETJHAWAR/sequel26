@@ -228,7 +228,6 @@ function actionRegister(b) {
       consent: now
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
-    autoCloseIfFull(sheet);                 // auto-collect: this may have been the last slot
     return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
 
   } finally {
@@ -284,6 +283,7 @@ function actionSubmitPayment(b) {
     if (link) sheet.getRange(row, C.shot).setValue(link);
     sheet.getRange(row, C.status).setValue(S.CLAIMED);
     sheet.getRange(row, C.updated).setValue(new Date());
+    autoCloseIfFull(sheet);                 // auto-collect counts paid entries: this may be the last one
 
     notifyOrganiser(sheet, row, utr);
     return { ok: true, status: S.CLAIMED };
@@ -435,6 +435,7 @@ function adminDecide(b) {
       if (b.method) sheet.getRange(row, C.notes).setValue(String(b.method));
       sheet.getRange(row, C.updated).setValue(now);
       emailApproved(sheet, row, code);
+      autoCloseIfFull(sheet);               // a cash "Mark paid" counts too
       return { ok: true, code: code };
     }
 
@@ -613,16 +614,18 @@ function getPayee() {
   return _payeeMemo;
 }
 
-/** Auto-collect state. Counts rows registered since ROTATE_SINCE that were
-    not rejected, per collector; `current` is the first collector in
-    PAYEE_IDS order still under ROTATE_PER (the last one once all are full). */
+/** Auto-collect state. An entry COUNTS once its UPI reference is in
+    (Verifying or Paid); rows still Awaiting payment are only "pending".
+    Only rows registered since ROTATE_SINCE belong to the round. `current` is
+    the first collector in PAYEE_IDS order with fewer than ROTATE_PER paid
+    entries (the last one once all are full). */
 function autoInfo(sheet) {
   var on    = prop('AUTO_ROTATE') === '1';
   var per   = parseInt(prop('ROTATE_PER'), 10) || 15;
   var total = parseInt(prop('ROTATE_TOTAL'), 10) || 45;
   var since = prop('ROTATE_SINCE') ? new Date(prop('ROTATE_SINCE')) : null;
-  var counts = {}, assigned = 0;
-  PAYEE_IDS.forEach(function (id) { counts[id] = 0; });
+  var counts = {}, sums = {}, pending = {}, paid = 0, collected = 0;
+  PAYEE_IDS.forEach(function (id) { counts[id] = 0; sums[id] = 0; pending[id] = 0; });
   if (on && sheet) {
     var last = sheet.getLastRow();
     if (last > 1) {
@@ -630,9 +633,13 @@ function autoInfo(sheet) {
       for (var i = 0; i < vals.length; i++) {
         var created = vals[i][C.created - 1], status = vals[i][C.status - 1];
         if (since && !(created instanceof Date && created >= since)) continue;
-        if (status === S.REJECTED) continue;
-        counts[normPayee(vals[i][C.payee - 1])]++;
-        assigned++;
+        var id = normPayee(vals[i][C.payee - 1]);
+        if (status === S.CLAIMED || status === S.PAID) {
+          var amt = Number(vals[i][C.amount - 1]) || 0;
+          counts[id]++; sums[id] += amt; paid++; collected += amt;
+        } else if (status === S.STARTED) {
+          pending[id]++;
+        }
       }
     }
   }
@@ -641,8 +648,8 @@ function autoInfo(sheet) {
     if (counts[PAYEE_IDS[j]] < per) { current = PAYEE_IDS[j]; break; }
   }
   return { on: on, per: per, total: total, since: since ? since.toISOString() : '',
-           counts: counts, assigned: assigned, current: current,
-           message: String(prop('ROTATE_PAUSE_MSG') || '') };
+           counts: counts, sums: sums, pending: pending, paid: paid, collected: collected,
+           current: current, message: String(prop('ROTATE_PAUSE_MSG') || '') };
 }
 
 function isAutoOn() { return prop('AUTO_ROTATE') === '1'; }
@@ -650,17 +657,18 @@ function isFull()   { return prop('REG_FULL') === '1'; }
 
 function getFullMessage() {
   return String(prop('FULL_MESSAGE') || '').trim() ||
-         'This batch of passes is full — the next batch opens soon.';
+         'Early bird registrations are closed — this batch is full. Regular entries will open soon.';
 }
 
-/** Called right after a new row is added: once the round's total is reached,
-    close the site to NEW registrations (a flag, so a later deletion or
-    rejection cannot silently reopen it). Existing rows keep working: they can
-    still return, be quoted and pay — that is the whole point of the batch. */
+/** Called whenever an entry becomes paid (reference submitted, or marked
+    paid by hand): once the round's total is reached, close the site to NEW
+    registrations (a flag, so a later deletion or rejection cannot silently
+    reopen it). Existing rows keep working: they can still return, be quoted
+    and pay — that is the whole point of the batch. */
 function autoCloseIfFull(sheet) {
   if (!isAutoOn() || isFull()) return;
   var st = autoInfo(sheet);
-  if (st.assigned >= st.total) {
+  if (st.paid >= st.total) {
     var props = PropertiesService.getScriptProperties();
     props.setProperty('REG_FULL', '1');
     props.setProperty('FULL_MESSAGE', st.message);

@@ -219,14 +219,16 @@ dialog h3{font-family:var(--disp);text-transform:uppercase;font-weight:800;font-
     <label class="autohead" for="autoOn"><input type="checkbox" id="autoOn"> Rotate automatically</label>
     <p class="hint" style="margin:8px 0 10px">
       Hands the accounts out in the order above,
-      <input type="number" id="autoPer" min="1" max="1000" step="1"> registrations each, and pauses the
-      site once <input type="number" id="autoTotal" min="1" max="10000" step="1"> have registered in total.
-      Picking an account by hand switches this off. Resuming after the auto-pause starts a fresh count.
+      <input type="number" id="autoPer" min="1" max="1000" step="1"> paid entries each, and closes new
+      registrations once <input type="number" id="autoTotal" min="1" max="10000" step="1"> have paid in total.
+      An entry counts when its UPI reference is submitted (or you mark it paid); registrations still
+      awaiting payment only count as pending. Anyone already registered can still pay after the close.
+      Picking an account by hand switches this off.
     </p>
     <div class="field" style="margin:0 0 10px">
-      <label for="autoMsg">Message shown when it pauses</label>
+      <label for="autoMsg">Message shown on the site once closed</label>
       <textarea id="autoMsg" rows="2" maxlength="300"
-        placeholder="This batch of passes is full — the next batch opens soon."></textarea>
+        placeholder="Early bird registrations are closed — this batch is full. Regular entries will open soon."></textarea>
     </div>
     <p class="hint" id="autoProgress" style="margin:0"></p>
   </div>
@@ -423,7 +425,7 @@ function paintControls(){
   const autoOn = !!(AUTO && AUTO.on);
   $("#payeeBtn").textContent = autoOn
     ? "Auto · " + payeeLabel(AUTO.current) + " " + (AUTO.counts[AUTO.current]||0) + "/" + AUTO.per
-      + " · " + AUTO.assigned + "/" + AUTO.total
+      + " · " + AUTO.paid + "/" + AUTO.total + " paid"
     : "Collecting · " + payeeLabel(PAYEE_ID);
   $("#payeeBtn").classList.toggle("on", autoOn);
   $("#pauseBtn").textContent = PAUSED ? "Paused — resume" : "Pause entries";
@@ -595,8 +597,12 @@ function paintAutoProgress(){
   const a = AUTO;
   if(!(a && a.on)){ $("#autoProgress").textContent = "Off — the account picked above collects everything."; return; }
   const since = a.since ? new Date(a.since).toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}) : "";
-  $("#autoProgress").textContent = "This round: " + PAYEES.map(p=>p.label + " " + (a.counts[p.id]||0) + "/" + a.per).join(" · ")
-    + " — " + a.assigned + " of " + a.total + " registered" + (since ? " since " + since : "") + ".";
+  const sums = a.sums || {}, pend = a.pending || {};
+  $("#autoProgress").textContent = "This round: " + PAYEES.map(p =>
+      p.label + " " + (a.counts[p.id]||0) + "/" + a.per + " paid (" + rupees(sums[p.id]||0) + ")"
+      + ((pend[p.id]||0) ? " + " + pend[p.id] + " unpaid" : "")
+    ).join(" · ")
+    + " — " + a.paid + " of " + a.total + " paid, " + rupees(a.collected||0) + (since ? ", since " + since : "") + ".";
 }
 
 $("#payeeBtn").addEventListener("click", ()=>{
