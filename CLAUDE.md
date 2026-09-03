@@ -113,6 +113,16 @@ as base64, and written to a private Drive folder by `saveScreenshot()`. Upload
 failures are swallowed on purpose so a flaky upload never loses the payment claim —
 the UPI reference number is the thing that matters.
 
+**One read per request.** `apps-script.gs` memoises Script Properties
+(`allProps`/`prop`/`setProp`) and the whole sheet (`loadRows`) per execution;
+`readCell` reads the memo, `writeCell` writes the sheet AND the memo,
+`appendRow`/`deleteRow` drop the memo. Never call `getRange(...).setValue`
+directly for a data cell — go through `writeCell` or later reads in the same
+request will be stale. `adminLogin` returns the full `adminList` payload so
+the panel opens in one round trip. Both pages' `api()` retry twice (with a
+40 s timeout per attempt) because Apps Script sometimes answers with an HTML
+error page, especially in the minute after a redeploy.
+
 ## Hard rules
 
 - **Never** put the admin password in any file in this repo. Script Properties only.

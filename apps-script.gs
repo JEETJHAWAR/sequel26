@@ -90,7 +90,7 @@ function doPost(e) {
       case 'submitPayment':  return json(actionSubmitPayment(body));
       case 'getPass':        return json(actionGetPass(body));
 
-      case 'adminLogin':     return json(guard(body, function () { return { ok: true }; }));
+      case 'adminLogin':     return json(guard(body, adminList));   // one round trip: sign in AND load
       case 'adminList':      return json(guard(body, adminList));
       case 'adminSetPrice':  return json(guard(body, adminSetPrice));
       case 'adminSetPause':  return json(guard(body, adminSetPause));
@@ -196,26 +196,26 @@ function actionRegister(b) {
       var status = readCell(sheet, row, 'status');
 
       // Update their details but keep whatever payment state they're in.
-      sheet.getRange(row, C.name).setValue(name);
-      sheet.getRange(row, C.batch).setValue(batch);
-      sheet.getRange(row, C.roll).setValue(roll);
-      sheet.getRange(row, C.phone).setValue(phone);
-      if (!readCell(sheet, row, 'consent')) sheet.getRange(row, C.consent).setValue(now);
+      writeCell(sheet, row, 'name', name);
+      writeCell(sheet, row, 'batch', batch);
+      writeCell(sheet, row, 'roll', roll);
+      writeCell(sheet, row, 'phone', phone);
+      if (!readCell(sheet, row, 'consent')) writeCell(sheet, row, 'consent', now);
       // Not paid yet, or a rejected claim being retried: re-quote at the
       // CURRENT price and collector and record that on the row. A row still
       // being verified keeps its original amount and payee.
       if (status === S.STARTED || status === S.REJECTED) {
-        sheet.getRange(row, C.amount).setValue(getPrice());
+        writeCell(sheet, row, 'amount', getPrice());
         // The collector is sticky: the QR a student was first shown is their
         // QR, because they may already have paid it before coming back to
         // submit the reference. Switching collectors (by hand or auto) only
         // affects new registrations. Only a row with no collector at all
         // (pre-column) gets one now.
         if (String(readCell(sheet, row, 'payee') || '').trim() === '') {
-          sheet.getRange(row, C.payee).setValue(getPayee());
+          writeCell(sheet, row, 'payee', getPayee());
         }
       }
-      sheet.getRange(row, C.updated).setValue(now);
+      writeCell(sheet, row, 'updated', now);
       // Echo the ROW, never the live properties: the screen must show exactly
       // what the organiser will verify against. A row already being verified
       // sends the student to the waiting screen, not to a second QR.
@@ -232,6 +232,7 @@ function actionRegister(b) {
       consent: now
     };
     sheet.appendRow(COLS.map(function (c) { return values[c[1]]; }));
+    _rows = null;                            // the memo no longer has every row
     return { ok: true, price: price, payee: getPayee(), status: S.STARTED };
 
   } finally {
@@ -274,7 +275,7 @@ function actionSubmitPayment(b) {
       var flag = 'CHECK: screen showed Rs ' + shownAmount + ' to ' + (shownPayee || '?') +
                  ' at submit, row says Rs ' + o.amount + ' to ' + normPayee(o.payee) + '.';
       var notes = String(o.notes || '');
-      sheet.getRange(row, C.notes).setValue(notes ? notes + ' | ' + flag : flag);
+      writeCell(sheet, row, 'notes', notes ? notes + ' | ' + flag : flag);
     }
 
     var link = '';
@@ -283,10 +284,10 @@ function actionSubmitPayment(b) {
       catch (err) { link = ''; }        // a failed upload must not lose the payment claim
     }
 
-    sheet.getRange(row, C.utr).setValue(utr);
-    if (link) sheet.getRange(row, C.shot).setValue(link);
-    sheet.getRange(row, C.status).setValue(S.CLAIMED);
-    sheet.getRange(row, C.updated).setValue(new Date());
+    writeCell(sheet, row, 'utr', utr);
+    if (link) writeCell(sheet, row, 'shot', link);
+    writeCell(sheet, row, 'status', S.CLAIMED);
+    writeCell(sheet, row, 'updated', new Date());
     autoCloseIfFull(sheet);                 // auto-collect counts paid entries: this may be the last one
 
     notifyOrganiser(sheet, row, utr);
@@ -328,19 +329,11 @@ function guard(body, fn) {
 
 function adminList() {
   var sheet = getSheet();
-  var last = sheet.getLastRow();
-  var rows = [];
-  if (last > 1) {
-    var vals = sheet.getRange(2, 1, last - 1, COLS.length).getValues();
-    for (var i = 0; i < vals.length; i++) {
-      var o = { row: i + 2 };
-      for (var j = 0; j < COLS.length; j++) {
-        var v = vals[i][j];
-        o[COLS[j][1]] = (v instanceof Date) ? v.toISOString() : v;
-      }
-      rows.push(o);
-    }
-  }
+  var rows = loadRows(sheet).map(function (src) {
+    var o = {};
+    for (var k in src) { var v = src[k]; o[k] = (v instanceof Date) ? v.toISOString() : v; }
+    return o;
+  });
   return { ok: true, rows: rows, price: getPrice(), payee: getPayee(), event: EVENT_NAME,
            statuses: S, paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || ''),
            full: isFull(), fullMsg: String(prop('FULL_MESSAGE') || ''), auto: autoInfo(sheet) };
@@ -349,7 +342,7 @@ function adminList() {
 function adminSetPrice(b) {
   var p = parseInt(b.price, 10);
   if (!p || p < 1 || p > 100000) return { ok: false, error: 'Price must be between 1 and 100000.' };
-  PropertiesService.getScriptProperties().setProperty('TICKET_PRICE', String(p));
+  setProp('TICKET_PRICE', String(p));
   return { ok: true, price: p };
 }
 
@@ -361,9 +354,8 @@ function adminSetPayee(b) {
   if (PAYEE_IDS.indexOf(id) < 0) {
     return { ok: false, error: 'Unknown payee. Allowed: ' + PAYEE_IDS.join(', ') + '.' };
   }
-  var props = PropertiesService.getScriptProperties();
-  props.setProperty('PAYEE', id);
-  props.setProperty('AUTO_ROTATE', '');   // a hand-picked collector ends auto-collect
+  setProp('PAYEE', id);
+  setProp('AUTO_ROTATE', '');             // a hand-picked collector ends auto-collect
   return { ok: true, payee: id, auto: autoInfo(null) };
 }
 
@@ -372,27 +364,25 @@ function adminSetPayee(b) {
     it on (or restart=true) starts a fresh count from now; picking a collector
     by hand (adminSetPayee) turns it off. */
 function adminSetAuto(b) {
-  var props = PropertiesService.getScriptProperties();
   var on = (b.on === true || b.on === 'true');
   if (!on) {
-    props.setProperty('AUTO_ROTATE', '');
-    props.setProperty('REG_FULL', '');      // "batch full" only means something while rotating
+    setProp('AUTO_ROTATE', '');
+    setProp('REG_FULL', '');                // "batch full" only means something while rotating
     return { ok: true, auto: autoInfo(null), payee: normPayee(prop('PAYEE')) };
   }
   var per = parseInt(b.per, 10), total = parseInt(b.total, 10);
   if (!per || per < 1 || per > 1000)        return { ok: false, error: 'Entries per account must be between 1 and 1000.' };
   if (!total || total < 1 || total > 10000) return { ok: false, error: 'The pause-after total must be between 1 and 10000.' };
-  var wasOn   = props.getProperty('AUTO_ROTATE') === '1';
+  var wasOn   = prop('AUTO_ROTATE') === '1';
   var restart = (b.restart === true || b.restart === 'true');
-  props.setProperty('AUTO_ROTATE', '1');
-  props.setProperty('ROTATE_PER', String(per));
-  props.setProperty('ROTATE_TOTAL', String(total));
-  props.setProperty('ROTATE_PAUSE_MSG', String(b.message || '').trim().slice(0, 300));
-  if (!wasOn || restart || !props.getProperty('ROTATE_SINCE')) {
-    props.setProperty('ROTATE_SINCE', new Date().toISOString());
-    props.setProperty('REG_FULL', '');      // a fresh round reopens registrations
+  setProp('AUTO_ROTATE', '1');
+  setProp('ROTATE_PER', String(per));
+  setProp('ROTATE_TOTAL', String(total));
+  setProp('ROTATE_PAUSE_MSG', String(b.message || '').trim().slice(0, 300));
+  if (!wasOn || restart || !prop('ROTATE_SINCE')) {
+    setProp('ROTATE_SINCE', new Date().toISOString());
+    setProp('REG_FULL', '');                // a fresh round reopens registrations
   }
-  _payeeMemo = '';
   var info = autoInfo(getSheet());
   return { ok: true, auto: info, payee: info.current };
 }
@@ -401,11 +391,9 @@ function adminSetAuto(b) {
     this also starts the next round, otherwise the next registration would
     close the site again straight away. */
 function adminSetFull(b) {
-  var props = PropertiesService.getScriptProperties();
   var full = (b.full === true || b.full === 'true');
-  props.setProperty('REG_FULL', full ? '1' : '');
-  if (!full && prop('AUTO_ROTATE') === '1') props.setProperty('ROTATE_SINCE', new Date().toISOString());
-  _payeeMemo = '';
+  setProp('REG_FULL', full ? '1' : '');
+  if (!full && prop('AUTO_ROTATE') === '1') setProp('ROTATE_SINCE', new Date().toISOString());
   return { ok: true, full: full, auto: autoInfo(getSheet()) };
 }
 
@@ -414,9 +402,8 @@ function adminSetFull(b) {
 function adminSetPause(b) {
   var on  = (b.paused === true || b.paused === 'true');
   var msg = String(b.message || '').trim().slice(0, 300);
-  var props = PropertiesService.getScriptProperties();
-  props.setProperty('REG_PAUSED', on ? '1' : '');
-  props.setProperty('PAUSE_MESSAGE', msg);
+  setProp('REG_PAUSED', on ? '1' : '');
+  setProp('PAUSE_MESSAGE', msg);
   return { ok: true, paused: on, pauseMsg: msg };
 }
 
@@ -433,20 +420,20 @@ function adminDecide(b) {
 
     if (b.decision === 'approve') {
       var code = readCell(sheet, row, 'code') || nextCode(sheet);
-      sheet.getRange(row, C.code).setValue(code);
-      sheet.getRange(row, C.status).setValue(S.PAID);
-      sheet.getRange(row, C.verifiedAt).setValue(now);
-      if (b.method) sheet.getRange(row, C.notes).setValue(String(b.method));
-      sheet.getRange(row, C.updated).setValue(now);
+      writeCell(sheet, row, 'code', code);
+      writeCell(sheet, row, 'status', S.PAID);
+      writeCell(sheet, row, 'verifiedAt', now);
+      if (b.method) writeCell(sheet, row, 'notes', String(b.method));
+      writeCell(sheet, row, 'updated', now);
       emailApproved(sheet, row, code);
       autoCloseIfFull(sheet);               // a cash "Mark paid" counts too
       return { ok: true, code: code };
     }
 
     if (b.decision === 'reject') {
-      sheet.getRange(row, C.status).setValue(S.REJECTED);
-      sheet.getRange(row, C.notes).setValue(String(b.reason || 'Payment could not be matched.'));
-      sheet.getRange(row, C.updated).setValue(now);
+      writeCell(sheet, row, 'status', S.REJECTED);
+      writeCell(sheet, row, 'notes', String(b.reason || 'Payment could not be matched.'));
+      writeCell(sheet, row, 'updated', now);
       emailRejected(sheet, row, String(b.reason || ''));
       return { ok: true };
     }
@@ -464,13 +451,13 @@ function adminUpdate(b) {
   if (!row || row < 2 || row > sheet.getLastRow()) return { ok: false, error: 'Bad row.' };
 
   if (b.field === 'checkedIn') {
-    sheet.getRange(row, C.checkedIn).setValue(readCell(sheet, row, 'checkedIn') ? '' : new Date());
+    writeCell(sheet, row, 'checkedIn', readCell(sheet, row, 'checkedIn') ? '' : new Date());
   } else if (b.field === 'notes') {
-    sheet.getRange(row, C.notes).setValue(String(b.value || '').slice(0, 500));
+    writeCell(sheet, row, 'notes', String(b.value || '').slice(0, 500));
   } else {
     return { ok: false, error: 'Unknown field.' };
   }
-  sheet.getRange(row, C.updated).setValue(new Date());
+  writeCell(sheet, row, 'updated', new Date());
   return { ok: true };
 }
 
@@ -490,6 +477,7 @@ function adminDelete(b) {
       return { ok: false, error: 'Row moved — refresh the list and try again.' };
     }
     sheet.deleteRow(row);
+    _rows = null;
     return { ok: true };
   } finally {
     try { lock.releaseLock(); } catch (ignore) {}
@@ -595,7 +583,49 @@ function getSheet() {
   return s;
 }
 
-function prop(k) { return PropertiesService.getScriptProperties().getProperty(k); }
+/* ---- one read per request ---------------------------------------------
+   Each request memoises the Script Properties (one RPC) and the whole
+   Registrations sheet (one RPC). Cell reads come from the memo; cell writes
+   go to the sheet AND the memo; appendRow / deleteRow drop the memo. Apps
+   Script runs each request in a fresh execution, so nothing here can go
+   stale across requests. */
+var _props = null, _rows = null;
+
+function allProps() {
+  if (!_props) _props = PropertiesService.getScriptProperties().getProperties();
+  return _props;
+}
+function prop(k) {
+  var v = allProps()[k];
+  return (v === undefined || v === null) ? null : v;
+}
+function setProp(k, v) {
+  PropertiesService.getScriptProperties().setProperty(k, v);
+  allProps()[k] = v;
+  _payeeMemo = '';
+}
+
+/** All data rows as objects keyed by COLS key, plus .row (sheet row number). */
+function loadRows(sheet) {
+  if (_rows) return _rows;
+  var last = sheet.getLastRow();
+  _rows = [];
+  if (last > 1) {
+    var vals = sheet.getRange(2, 1, last - 1, COLS.length).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      var o = { row: i + 2 };
+      for (var j = 0; j < COLS.length; j++) o[COLS[j][1]] = vals[i][j];
+      _rows.push(o);
+    }
+  }
+  return _rows;
+}
+function rowObj(sheet, row) { return loadRows(sheet)[row - 2] || null; }
+function writeCell(sheet, row, key, val) {
+  sheet.getRange(row, C[key]).setValue(val);
+  var o = rowObj(sheet, row);
+  if (o) o[key] = val;
+}
 
 function getPrice() {
   var p = parseInt(prop('TICKET_PRICE'), 10);
@@ -631,19 +661,16 @@ function autoInfo(sheet) {
   var counts = {}, sums = {}, pending = {}, paid = 0, collected = 0;
   PAYEE_IDS.forEach(function (id) { counts[id] = 0; sums[id] = 0; pending[id] = 0; });
   if (on && sheet) {
-    var last = sheet.getLastRow();
-    if (last > 1) {
-      var vals = sheet.getRange(2, 1, last - 1, COLS.length).getValues();
-      for (var i = 0; i < vals.length; i++) {
-        var created = vals[i][C.created - 1], status = vals[i][C.status - 1];
-        if (since && !(created instanceof Date && created >= since)) continue;
-        var id = normPayee(vals[i][C.payee - 1]);
-        if (status === S.CLAIMED || status === S.PAID) {
-          var amt = Number(vals[i][C.amount - 1]) || 0;
-          counts[id]++; sums[id] += amt; paid++; collected += amt;
-        } else if (status === S.STARTED) {
-          pending[id]++;
-        }
+    var rs = loadRows(sheet);
+    for (var i = 0; i < rs.length; i++) {
+      var created = rs[i].created, status = rs[i].status;
+      if (since && !(created instanceof Date && created >= since)) continue;
+      var id = normPayee(rs[i].payee);
+      if (status === S.CLAIMED || status === S.PAID) {
+        var amt = Number(rs[i].amount) || 0;
+        counts[id]++; sums[id] += amt; paid++; collected += amt;
+      } else if (status === S.STARTED) {
+        pending[id]++;
       }
     }
   }
@@ -673,9 +700,8 @@ function autoCloseIfFull(sheet) {
   if (!isAutoOn() || isFull()) return;
   var st = autoInfo(sheet);
   if (st.paid >= st.total) {
-    var props = PropertiesService.getScriptProperties();
-    props.setProperty('REG_FULL', '1');
-    props.setProperty('FULL_MESSAGE', st.message);
+    setProp('REG_FULL', '1');
+    setProp('FULL_MESSAGE', st.message);
   }
 }
 
@@ -684,7 +710,10 @@ function getPauseMessage() {
          'Registrations are paused for a moment while we update things. Check back shortly.';
 }
 
-function readCell(sheet, row, key) { return sheet.getRange(row, C[key]).getValue(); }
+function readCell(sheet, row, key) {
+  var o = rowObj(sheet, row);
+  return o ? o[key] : sheet.getRange(row, C[key]).getValue();
+}
 
 /** j***@iimk.ac.in — enough to recognise your own address, not someone else's. */
 function maskEmail(email) {
@@ -696,25 +725,22 @@ function maskEmail(email) {
 function findRow(sheet, email) { return findRowBy(sheet, 'email', email); }
 
 function findRowBy(sheet, key, needle) {
-  var last = sheet.getLastRow();
-  if (last < 2) return 0;
-  var vals = sheet.getRange(2, C[key], last - 1, 1).getValues();
   var want = String(needle).trim().toLowerCase();
   if (!want) return 0;
-  for (var i = 0; i < vals.length; i++) {
-    if (String(vals[i][0]).trim().toLowerCase() === want) return i + 2;
+  var rs = loadRows(sheet);
+  for (var i = 0; i < rs.length; i++) {
+    if (String(rs[i][key]).trim().toLowerCase() === want) return rs[i].row;
   }
   return 0;
 }
 
 /** Sequential codes — easy to read out at the entry desk. */
 function nextCode(sheet) {
-  var last = sheet.getLastRow();
+  var rs = loadRows(sheet);
   var n = 0;
-  if (last > 1) {
-    var vals = sheet.getRange(2, C.code, last - 1, 1).getValues();
-    for (var i = 0; i < vals.length; i++) {
-      var m = String(vals[i][0]).match(/SQL26-(\d+)/);
+  if (rs.length) {
+    for (var i = 0; i < rs.length; i++) {
+      var m = String(rs[i].code).match(/SQL26-(\d+)/);
       if (m) n = Math.max(n, parseInt(m[1], 10));
     }
   }
@@ -724,10 +750,12 @@ function nextCode(sheet) {
 /** Every cell of one row keyed by COLS key — a single read, so amount and
     payee can never be torn between two writes. */
 function rowValues(sheet, row) {
+  var o = rowObj(sheet, row);
+  if (o) return o;
   var v = sheet.getRange(row, 1, 1, COLS.length).getValues()[0];
-  var o = {};
-  COLS.forEach(function (c, i) { o[c[1]] = v[i]; });
-  return o;
+  var r = { row: row };
+  COLS.forEach(function (c, i) { r[c[1]] = v[i]; });
+  return r;
 }
 
 function passFromRow(sheet, row) {
@@ -768,9 +796,7 @@ function setup() {
   sheet.setColumnWidth(C.name, 200);
   sheet.setColumnWidth(C.email, 230);
 
-  if (!prop('TICKET_PRICE')) {
-    PropertiesService.getScriptProperties().setProperty('TICKET_PRICE', '800');
-  }
+  if (!prop('TICKET_PRICE')) setProp('TICKET_PRICE', '800');
 
   var msg = prop('ADMIN_PASSWORD')
     ? 'Everything is set.\n\nNow: Deploy > New deployment > Web app\nExecute as: Me\nWho has access: Anyone\n\nPaste the /exec URL into index.html and admin.html.'

@@ -702,13 +702,29 @@ setInterval(()=>{
    ===================================================================== */
 const connected = () => CONFIG.endpoint.indexOf("PASTE_YOUR") !== 0;
 
+/* Apps Script now and then answers with an HTML error page instead of JSON,
+   or drops a request outright (especially in the minute after a redeploy).
+   Retry twice with a short backoff, and never hang on one attempt. */
 async function api(payload){
-  const res = await fetch(CONFIG.endpoint, {
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},   // avoids a CORS preflight
-    body: JSON.stringify(payload)
-  });
-  return res.json();
+  let lastErr = null;
+  for(let attempt = 0; attempt < 3; attempt++){
+    if(attempt) await new Promise(r=>setTimeout(r, 1500 * attempt));
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 40000);
+    try{
+      const res = await fetch(CONFIG.endpoint, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},   // avoids a CORS preflight
+        body: JSON.stringify(payload),
+        signal: ctrl.signal
+      });
+      const text = await res.text();
+      try{ return JSON.parse(text); }
+      catch(e){ lastErr = new Error("Google returned an error page (HTTP " + res.status + ")"); }
+    }catch(err){ lastErr = err; }
+    finally{ clearTimeout(timer); }
+  }
+  throw lastErr;
 }
 
 /* Server state (price, collector, pause) is applied everywhere EXCEPT onto a

@@ -311,13 +311,29 @@ const payeeLabel = id => {
   return p ? p.label : String(id);
 };
 
+/* Apps Script now and then answers with an HTML error page instead of JSON,
+   or drops a request outright (especially in the minute after a redeploy).
+   Retry twice with a short backoff, and never hang on one attempt. */
 async function api(payload){
-  const res = await fetch(CONFIG.endpoint, {
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body: JSON.stringify({...payload, password: PW})
-  });
-  return res.json();
+  let lastErr = null;
+  for(let attempt = 0; attempt < 3; attempt++){
+    if(attempt) await new Promise(r=>setTimeout(r, 1500 * attempt));
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 40000);
+    try{
+      const res = await fetch(CONFIG.endpoint, {
+        method:"POST",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify({...payload, password: PW}),
+        signal: ctrl.signal
+      });
+      const text = await res.text();
+      try{ return JSON.parse(text); }
+      catch(e){ lastErr = new Error("Google returned an error page (HTTP " + res.status + ") — try again"); }
+    }catch(err){ lastErr = err; }
+    finally{ clearTimeout(timer); }
+  }
+  throw lastErr;
 }
 
 /* ---------- login ---------- */
@@ -345,7 +361,8 @@ async function login(){
       $("#gate").classList.add("hidden");
       $("#panel").classList.remove("hidden");
       $("#pw").value = "";
-      await load();
+      if(r.rows) applyList(r);            // the new backend signs in and lists in one go
+      else await load();                  // older backend: fetch the list separately
     }else{ PW=""; gateError(r.error || "Wrong password."); }
   }catch(err){ PW=""; gateError("Couldn't reach the server."); }
   finally{ b.disabled=false; b.textContent="Sign in"; }
@@ -366,16 +383,20 @@ async function load(){
   try{
     const r = await api({action:"adminList"});
     if(!r.ok) throw new Error(r.error || "Failed");
-    ROWS = r.rows || []; PRICE = r.price || 0;
-    PAYEE_ID = r.payee || "jeet";
-    AUTO = r.auto || null;
-    FULL = !!r.full; FULLMSG = r.fullMsg || "";
-    PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
-    render();
+    applyList(r);
   }catch(err){
     $("#empty").textContent = "Couldn't load: " + err.message;
     $("#empty").classList.remove("hidden");
   }finally{ b.disabled=false; b.textContent="Refresh"; }
+}
+
+function applyList(r){
+  ROWS = r.rows || []; PRICE = r.price || 0;
+  PAYEE_ID = r.payee || "jeet";
+  AUTO = r.auto || null;
+  FULL = !!r.full; FULLMSG = r.fullMsg || "";
+  PAUSED = !!r.paused; PAUSEMSG = r.pauseMsg || "";
+  render();
 }
 
 /* ---------- render ---------- */
