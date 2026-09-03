@@ -59,15 +59,17 @@ row can still come back, get its quote and pay — the QR stays up. The admin
 banner's "Reopen registrations" (`adminSetFull` false) clears the flag and,
 with auto still on, starts the next round (`ROTATE_SINCE` = now); "Restart
 count" in the Collecting dialog does the same. Hand-picking a collector turns
-auto off. In auto mode a re-registering row keeps the collector it was handed
-(its slot was counted); by hand, a switch re-quotes everyone still unpaid.
+auto off. A re-registering row always keeps the collector it was handed.
 Counts are paid entries (reference submitted), not admin-verified ones —
 verification lags by hours and would let an account overshoot before approval. The `PAYEES` map exists in `index.html` (UPI ID +
 name + QR per tier) and `admin.html` (labels), with the id whitelist `PAYEE_IDS`
 in `apps-script.gs`. **Adding a payee means updating all three.** Each sheet row
 records who it paid in the `Paid to` column (empty = Jeet, pre-column rows), set
-at registration and refreshed while the row is still `Awaiting payment` — the
-same rule as the amount. Verification must check the account in that column.
+at registration and **sticky from then on** (a returning student may already
+have paid that account before coming back to submit the reference); only the
+amount is re-quoted while the row is still `Awaiting payment`. Switching
+collectors, by hand or via auto-collect, affects new registrations only.
+Verification must check the account in that column.
 UPI IDs are public payment addresses — fine in a public repo, but Jeet's is a
 phone-number handle, so publishing the site publishes that number.
 

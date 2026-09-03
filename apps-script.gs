@@ -206,10 +206,14 @@ function actionRegister(b) {
       // being verified keeps its original amount and payee.
       if (status === S.STARTED || status === S.REJECTED) {
         sheet.getRange(row, C.amount).setValue(getPrice());
-        // Auto-collect: a row keeps the collector it was handed (that slot was
-        // counted). By hand, a switch applies to everyone still unpaid.
-        var keepPayee = isAutoOn() && String(readCell(sheet, row, 'payee') || '').trim() !== '';
-        if (!keepPayee) sheet.getRange(row, C.payee).setValue(getPayee());
+        // The collector is sticky: the QR a student was first shown is their
+        // QR, because they may already have paid it before coming back to
+        // submit the reference. Switching collectors (by hand or auto) only
+        // affects new registrations. Only a row with no collector at all
+        // (pre-column) gets one now.
+        if (String(readCell(sheet, row, 'payee') || '').trim() === '') {
+          sheet.getRange(row, C.payee).setValue(getPayee());
+        }
       }
       sheet.getRange(row, C.updated).setValue(now);
       // Echo the ROW, never the live properties: the screen must show exactly
