@@ -266,7 +266,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
       <div><dt>Date</dt><dd data-cfg="eventDate">TBC</dd></div>
       <div><dt>Time</dt><dd data-cfg="eventTime">TBC</dd></div>
       <div><dt>Venue</dt><dd data-cfg="venue">TBC</dd></div>
-      <div><dt id="factTier">Pass</dt><dd class="gold" id="factPrice">₹800</dd></div>
+      <div><dt id="factTier">Pass</dt><dd class="gold" id="factPrice">…</dd></div>
     </dl>
 
     <div class="hero-cta">
@@ -388,7 +388,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
         <div class="err hidden" id="consentErr"></div>
       </div>
 
-      <div class="total"><span>Amount payable</span><b id="priceLabel">₹800</b></div>
+      <div class="total"><span>Amount payable</span><b id="priceLabel">…</b></div>
       <div style="margin-top:20px">
         <button type="button" class="btn wide" id="toPayBtn">Continue to payment</button>
       </div>
@@ -411,7 +411,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 
       <div class="payhead">
         <span id="payTier" style="font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)">Amount</span>
-        <p class="amt" id="payAmount">₹800</p>
+        <p class="amt" id="payAmount">…</p>
         <p class="who">for <b id="payName">—</b> · <span id="payBatch">—</span></p>
       </div>
 
@@ -430,7 +430,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
             <button type="button" class="mini" id="copyUpi">Copy</button>
           </div>
           <p class="paynote">The QR and the button both carry the exact amount. If your app asks
-            you to type it, pay <b id="payAmount2">₹800</b> — a different amount can't be verified.</p>
+            you to type it, pay <b id="payAmount2">…</b> — a different amount can't be verified.</p>
           <p class="paynote"><b>After paying, come back to this page</b> and enter the UPI reference
             number in step 03 below — that's the only way we can verify you. A screenshot on
             WhatsApp alone won't get you a pass.</p>
@@ -533,7 +533,7 @@ footer{border-top:1px solid var(--line);padding-block:38px 100px}
 </footer>
 
 <div class="sticky" id="sticky">
-  <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">₹800 · TBC</b></p>
+  <p><span data-cfg="deadlineShort">Registration closes soon</span><b id="stickyPrice">…</b></p>
   <a class="btn" href="#register">Get pass</a>
 </div>
 
@@ -585,8 +585,9 @@ const CONFIG = {
   contactName:     "Students' Council BMS",
   contactWhatsApp: "919329641726",
 
-  fallbackPrice: 800     // shown for a split second until the live price loads;
-                         // matches the ₹800 literals in the markup — change both
+  fallbackPrice: 1000    // shown ONLY if the live price has not arrived after 8 s
+                         // (slow or unreachable server); until then the page shows "…"
+                         // so a stale number never flashes when the tier changes
 };
 
 /* Price tiers. The admin panel sets the price (Ticket price button); the
@@ -646,7 +647,7 @@ $("#includes").innerHTML = INCLUDES.map(i=>`<li>${esc(i)}</li>`).join("");
 const waHref = "https://wa.me/" + CONFIG.contactWhatsApp;
 ["footWa","waHelp"].forEach(id=>{ const el=$("#"+id); if(el) el.href = waHref; });
 
-let PRICE = CONFIG.fallbackPrice;
+let PRICE = 0;                                   // 0 = not known yet
 let PAYEE = "jeet";                              // overwritten by the server
 const payee = () => PAYEES[PAYEE] || PAYEES.jeet;
 let lastDetails = null;                          // what the quote on screen was registered with
@@ -660,7 +661,17 @@ function paintPrice(){
   $("#factTier").textContent    = t ? "Pass · " + t.label : "Pass";
   $("#payTier").textContent     = t ? "Amount · " + t.label : "Amount";
 }
-paintPrice();
+
+/* Until the live price arrives the page shows dots, never a guess: a wrong
+   number that then flips is worse than a short wait. */
+function paintPlaceholder(){
+  ["#priceLabel","#factPrice","#payAmount","#payAmount2"].forEach(sel=>$(sel).textContent="…");
+  $("#stickyPrice").textContent = "… · " + CONFIG.eventDate;
+  $("#factTier").textContent = "Pass";
+  $("#payTier").textContent  = "Amount";
+}
+paintPlaceholder();
+setTimeout(()=>{ if(!PRICE){ PRICE = CONFIG.fallbackPrice; paintPrice(); } }, 8000);
 
 /* Organisers can pause new registrations from the admin panel (e.g. while
    switching price tiers). Step 1 is swapped for the pause notice; anyone
