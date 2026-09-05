@@ -48,7 +48,9 @@ in the page — that's fine, a UPI ID is a public payment address.
    | `TICKET_PRICE` | `800` |
 
 5. Back in the editor → run **`setup`** → grant permissions
-   (**Advanced → Go to … (unsafe) → Allow** — it's your own script)
+   (**Advanced → Go to … (unsafe) → Allow** — it's your own script).
+   This also adds an **Expenses** tab to the spreadsheet for the admin panel's
+   Money tab (it is created on first use anyway if you skip this).
 6. Run **`testConnection`** → **View → Logs**. Everything should say `set` / `OK`.
 7. **Deploy → New deployment → Web app**
    - Execute as: **Me**
@@ -169,6 +171,7 @@ Do this in batches. Twice a day is plenty.
 | Entry desk | Filter **Paid**, search a name or code → **Check in** |
 | Who hasn't arrived | Filter **Not in yet** |
 | Export | **Export CSV** — exports whatever the current filter shows |
+| Money | **Money** tab — collected vs verifying, what sits in each collector's account, per-price counts, and an expense log (date, what for, amount, who paid, notes). Expenses go to the **Expenses** sheet; delete from the panel, or export them as CSV |
 
 **Email limits:** Apps Script sends 100/day on a personal Gmail, 1500/day on a
 Workspace account like `@iimk.ac.in`. Use the institute account if you have it.
@@ -198,6 +201,9 @@ can still use "Check my status".
 ## Money
 
 - It goes straight to your UPI account. No gateway, no percentage taken.
+- Log what you spend in the admin panel's **Money** tab as you go, with who paid
+  it — the tab then shows what each account has in hand after expenses, so
+  settling up between collectors at the end is arithmetic, not archaeology.
 - Your **UPI transaction history is the source of truth.** The sheet is your record
   of who gets in; your bank statement is the record of what came in. Reconcile them
   once after registration closes.

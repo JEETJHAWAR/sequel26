@@ -128,6 +128,21 @@ paid-entry tally is cached in `CacheService` for 20 s (`autoTally`) so a plain
 page-load `price` call needs no sheet read; every write that can change the
 tally drops the cache, and a request that already read the sheet always
 recomputes, so a registration is never assigned from a stale tally.
+`setProp(k, '')` **deletes** the property instead of storing a blank: the
+Script Properties editor refuses to save while any value is empty, which had
+locked the user out of changing the password by hand. Missing means "off"
+everywhere (`prop()` returns null for both).
+
+**Money tab** (admin panel). Collections need no extra backend: the tab is
+computed in `admin.html` from the rows `adminList` already returns (collected
+= `Paid`, verifying = `Verifying`, per collector from `Paid to`, per amount).
+Expenses live in a second sheet, `Expenses` (`EXPENSE_SHEET` / `XCOLS` in
+`apps-script.gs`: Date, Item, Amount, Paid by, Notes, Added, Id), created by
+`setup()` or on the first add. `adminList` returns them as `expenses`;
+`adminAddExpense` / `adminDeleteExpense` (by `Id`, never by row number) return
+the fresh list. `Paid by` is a collector id from `PAYEE_IDS` or `other`, so
+the tab can show what each account actually holds (collected minus expenses
+paid from it). Expenses are only ever written from the admin panel.
 
 ## Hard rules
 
@@ -157,6 +172,8 @@ recomputes, so a registration is never assigned from a stale tally.
 - **Tier names** → `TIERS` in `index.html` **and** `admin.html`.
 - **Who collects** → not in code. The admin panel's "Collecting" button (Script
   Properties `PAYEE`).
+- **Expense columns** → `XCOLS` in `apps-script.gs` + the form and table in the
+  Money tab of `admin.html`. The "Paid by" choices are `PAYEES` plus "Other / cash".
 
 ## Common asks
 

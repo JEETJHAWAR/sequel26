@@ -71,6 +71,19 @@ const COLS = [
     'Paid to' predate this column: they were all collected by jeet. */
 const PAYEE_IDS = ['jeet', 'anshika', 'niveditha'];
 
+/** Expense log — its own tab in the same spreadsheet, written only from the
+    admin panel's Money tab. Created on first use (setup() also creates it). */
+const EXPENSE_SHEET = 'Expenses';
+const XCOLS = [
+  ['Date',    'date'],
+  ['Item',    'item'],
+  ['Amount',  'amount'],
+  ['Paid by', 'paidBy'],    // a collector id from PAYEE_IDS, or 'other' (cash / someone else)
+  ['Notes',   'notes'],
+  ['Added',   'added'],
+  ['Id',      'id']         // random id — deletes name this, never a row number
+];
+
 const C = {};
 COLS.forEach(function (c, i) { C[c[1]] = i + 1; });
 
@@ -100,6 +113,9 @@ function doPost(e) {
       case 'adminDecide':    return json(guard(body, adminDecide));
       case 'adminUpdate':    return json(guard(body, adminUpdate));
       case 'adminDelete':    return json(guard(body, adminDelete));
+      case 'adminExpenses':      return json(guard(body, adminExpenses));
+      case 'adminAddExpense':    return json(guard(body, adminAddExpense));
+      case 'adminDeleteExpense': return json(guard(body, adminDeleteExpense));
 
       default: return json({ ok: false, error: 'Unknown action' });
     }
@@ -338,7 +354,8 @@ function adminList() {
   });
   return { ok: true, rows: rows, price: getPrice(), payee: getPayee(), event: EVENT_NAME,
            statuses: S, paused: isPaused(), pauseMsg: String(prop('PAUSE_MESSAGE') || ''),
-           full: isFull(), fullMsg: String(prop('FULL_MESSAGE') || ''), auto: autoInfo(sheet) };
+           full: isFull(), fullMsg: String(prop('FULL_MESSAGE') || ''), auto: autoInfo(sheet),
+           expenses: loadExpenses() };
 }
 
 function adminSetPrice(b) {
@@ -491,6 +508,124 @@ function adminDelete(b) {
 
 
 /* ==================================================================
+   EXPENSES — the admin panel's Money tab
+   ================================================================== */
+function adminExpenses() { return { ok: true, expenses: loadExpenses() }; }
+
+function adminAddExpense(b) {
+  var item = String(b.item || '').trim().slice(0, 120);
+  if (!item) return { ok: false, error: 'Say what the expense was for.' };
+  var amount = Math.round(Number(b.amount) * 100) / 100;
+  if (!(amount > 0) || amount > 10000000) return { ok: false, error: 'Enter a valid amount.' };
+  var date = parseDay(b.date);
+  if (!date) return { ok: false, error: 'Enter a valid date.' };
+  var paidBy = String(b.paidBy || '').trim().toLowerCase();
+  if (PAYEE_IDS.indexOf(paidBy) < 0) paidBy = 'other';
+  var notes = String(b.notes || '').trim().slice(0, 300);
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = getExpenseSheet(true);
+    var id = 'X' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    var values = { date: date, item: item, amount: amount, paidBy: paidBy,
+                   notes: notes, added: new Date(), id: id };
+    sheet.appendRow(XCOLS.map(function (c) { return values[c[1]]; }));
+    _xrows = null;
+    return { ok: true, id: id, expenses: loadExpenses() };
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
+  }
+}
+
+/** Deletes by id, never by row number, so two admins deleting at once can't
+    hit the wrong line. */
+function adminDeleteExpense(b) {
+  var id = String(b.id || '').trim();
+  if (!id) return { ok: false, error: 'Bad id.' };
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var sheet = getExpenseSheet(false);
+    var hit = null, xs = loadExpenses();
+    for (var i = 0; i < xs.length; i++) if (xs[i].id === id) hit = xs[i];
+    if (!sheet || !hit) return { ok: false, error: 'Already gone — refresh the list.' };
+    sheet.deleteRow(hit.row);
+    _xrows = null;
+    return { ok: true, expenses: loadExpenses() };
+  } finally {
+    try { lock.releaseLock(); } catch (ignore) {}
+  }
+}
+
+var _xrows = null;
+function getExpenseSheet(create) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var s = ss.getSheetByName(EXPENSE_SHEET);
+  if (!s && create) s = ss.insertSheet(EXPENSE_SHEET);
+  // A hand-made or wiped tab has no header; without one the first expense
+  // would land in row 1 and never be listed. Write it whenever the tab is empty.
+  if (s && create && s.getLastRow() === 0) formatExpenseSheet(s);
+  return s;
+}
+function formatExpenseSheet(s) {
+  var headers = XCOLS.map(function (c) { return c[0]; });
+  s.getRange(1, 1, 1, headers.length)
+   .setValues([headers]).setFontWeight('bold')
+   .setBackground('#221030').setFontColor('#F7F0E6');
+  s.setFrozenRows(1);
+  var n = s.getMaxRows() - 1;
+  s.getRange(2, 1, n, 1).setNumberFormat('yyyy-mm-dd');
+  s.getRange(2, 2, n, 1).setNumberFormat('@');   // Item: free text — "=DJ" must not become a formula, "1/2" not a date
+  s.getRange(2, 5, n, 1).setNumberFormat('@');   // Notes: same
+  s.setColumnWidth(2, 260);
+  s.setColumnWidth(5, 260);
+}
+
+/** Every expense as {row, date:'yyyy-mm-dd', item, amount, paidBy, notes, added, id},
+    memoised per execution like the registrations. */
+function loadExpenses() {
+  if (_xrows) return _xrows;
+  _xrows = [];
+  var sheet = getExpenseSheet(false);
+  if (!sheet) return _xrows;
+  var last = sheet.getLastRow();
+  if (last > 1) {
+    var vals = sheet.getRange(2, 1, last - 1, XCOLS.length).getValues();
+    for (var i = 0; i < vals.length; i++) {
+      var o = { row: i + 2 };
+      for (var j = 0; j < XCOLS.length; j++) o[XCOLS[j][1]] = vals[i][j];
+      o.date   = dayString(o.date);
+      o.item   = String(o.item || '');
+      o.amount = Number(o.amount) || 0;
+      o.paidBy = String(o.paidBy || 'other');
+      o.notes  = String(o.notes || '');
+      o.added  = (o.added instanceof Date) ? o.added.toISOString() : String(o.added || '');
+      o.id     = String(o.id || '');
+      _xrows.push(o);
+    }
+  }
+  return _xrows;
+}
+
+/** 'yyyy-mm-dd' -> a Date at noon in the script's timezone (noon, so no
+    timezone or DST edge can shift it to the day before). */
+function parseDay(s) {
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  var y = Number(m[1]), mo = Number(m[2]), da = Number(m[3]);
+  var d = new Date(y, mo - 1, da, 12, 0, 0);
+  // JS rolls "2026-13-40" over into a real date; refuse anything that moved
+  if (isNaN(d.getTime()) || d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
+  return d;
+}
+function dayString(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return String(v || '');
+}
+
+
+/* ==================================================================
    SCREENSHOTS -> DRIVE
    ================================================================== */
 function saveScreenshot(b64, mime, name, utr) {
@@ -597,16 +732,30 @@ function getSheet() {
 var _props = null, _rows = null;
 
 function allProps() {
-  if (!_props) _props = PropertiesService.getScriptProperties().getProperties();
+  if (!_props) {
+    var ps = PropertiesService.getScriptProperties();
+    _props = ps.getProperties();
+    // Blank values stored by the old setProp would keep the Script Properties
+    // editor unsaveable; missing means the same thing, so drop them once.
+    Object.keys(_props).forEach(function (k) {
+      if (_props[k] === '') { try { ps.deleteProperty(k); } catch (ignore) {} delete _props[k]; }
+    });
+  }
   return _props;
 }
 function prop(k) {
   var v = allProps()[k];
   return (v === undefined || v === null) ? null : v;
 }
+/** Empty means "off" everywhere here, so an empty value is stored as NO
+    property: the Script Properties editor refuses to save while any property
+    has a blank value ("Value is required"), which would lock you out of
+    changing the password by hand. prop() returns null for both. */
 function setProp(k, v) {
-  PropertiesService.getScriptProperties().setProperty(k, v);
-  allProps()[k] = v;
+  var ps = PropertiesService.getScriptProperties();
+  v = (v === null || v === undefined) ? '' : String(v);
+  if (v === '') { ps.deleteProperty(k); delete allProps()[k]; }
+  else          { ps.setProperty(k, v);  allProps()[k] = v; }
   _payeeMemo = '';
   cacheDrop('autoTally');        // rotation settings may have changed
 }
@@ -834,6 +983,7 @@ function setup() {
   sheet.setColumnWidth(C.name, 200);
   sheet.setColumnWidth(C.email, 230);
 
+  formatExpenseSheet(getExpenseSheet(true));    // header + text formats, safe to re-run
   if (!prop('TICKET_PRICE')) setProp('TICKET_PRICE', '800');
 
   var msg = prop('ADMIN_PASSWORD')
