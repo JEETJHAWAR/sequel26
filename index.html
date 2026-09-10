@@ -594,9 +594,10 @@ const CONFIG = {
    label is looked up here by exact amount. Keep in sync with TIERS in
    admin.html. */
 const TIERS = {
-  800:  { label: "Early bird" },
-  1000: { label: "Regular"    },
-  1200: { label: "Last call"  }
+  800:  { label: "Early bird"     },
+  1000: { label: "Regular"        },
+  700:  { label: "Late bird"      },
+  1200: { label: "Very late bird" }
 };
 
 /* Who collects the money. The admin panel picks one (so a single account
@@ -610,6 +611,7 @@ const PAYEES = {
     upiId: "9329641726@upi", upiName: "Mr JEET JHAWAR",
     qrs: { 800:  "images/upi-qr.png",
            1000: "images/upi-qr-1000.jpeg",
+           700:  "images/upi-qr-700.jpeg",
            1200: "images/upi-qr-1200.jpeg" }
   },
   anshika: {

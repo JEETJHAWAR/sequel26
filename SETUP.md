@@ -89,7 +89,8 @@ file per tier):
 |---|---|---|
 | Early bird | ₹800 | `images/upi-qr.png` |
 | Regular | ₹1,000 | `images/upi-qr-1000.jpeg` |
-| Last call | ₹1,200 | `images/upi-qr-1200.jpeg` |
+| Late bird | ₹700 | `images/upi-qr-700.jpeg` (Jeet only — Anshika and Niveditha show a live QR at this tier) |
+| Very late bird | ₹1,200 | `images/upi-qr-1200.jpeg` |
 
 You switch tiers from the admin panel (**Ticket price** button). The payment page
 automatically shows the signed QR matching the current price.
@@ -164,7 +165,7 @@ Do this in batches. Twice a day is plenty.
 
 | Task | How |
 |---|---|
-| Change the price tier | **Ticket price** button — pick Early bird ₹800 / Regular ₹1,000 / Last call ₹1,200. Applies to new registrations only; the site's QR switches with it |
+| Change the price tier | **Ticket price** button — pick Early bird ₹800 / Regular ₹1,000 / Late bird ₹700 / Very late bird ₹1,200. Applies to new registrations only; the site's QR switches with it |
 | Switch who collects | **Collecting** button — Jeet or Anshika. The QR, UPI ID and pay button all switch. Flip before an account hits its daily UPI receiving limit. Verify each row against the account in its **Paid to** column |
 | Pause entries | **Pause entries** button — blocks new sign-ups and shows your message. People mid-payment can still submit their reference. Pause while switching tiers, then resume |
 | Cash at the door | Find them (filter **No payment**) → **Mark paid** |

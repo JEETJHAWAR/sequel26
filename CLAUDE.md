@@ -19,7 +19,7 @@ Static site on GitHub Pages. **No build step, no npm, no bundler, no payment gat
 | `pass.js` | Draws the pass on canvas; exports PNG and a hand-built PDF. |
 | `apps-script.gs` | The backend. Pasted into Google Apps Script, NOT served by the site. |
 | `fonts/` | Three self-hosted WOFF2 files. No CDN fallback — do not delete. |
-| `images/` | `hero.jpg` (hero background), `campus-*.jpg` (section backdrops under a dark veil), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-1200.jpeg`; Anshika: `upi-qr-anshika-800/1000/1200.jpeg`; Niveditha: `upi-qr-niveditha-800/1000/1200.jpeg`. |
+| `images/` | `hero.jpg` (hero background), `campus-*.jpg` (section backdrops under a dark veil), `cover.jpg` (link preview), fixed-amount UPI QRs — Jeet: `upi-qr.png` (₹800), `upi-qr-1000.jpeg`, `upi-qr-700.jpeg`, `upi-qr-1200.jpeg` (only Jeet has a ₹700 QR — the other two fall back to the live QR at that tier); Anshika: `upi-qr-anshika-800/1000/1200.jpeg`; Niveditha: `upi-qr-niveditha-800/1000/1200.jpeg`. |
 
 ## Status flow
 
@@ -84,7 +84,8 @@ claimed). A price/payee response never overwrites a quote already on screen.
 the row is appended to Notes as `CHECK: …` and shown as a red "check" pill in
 the admin table — the row itself is never overwritten from the client.
 
-Prices are **tiered**: ₹800 "Early bird", ₹1000 "Regular", ₹1200 "Last call". The
+Prices are **tiered**, in the order they are meant to run: ₹800 "Early bird",
+₹1000 "Regular", ₹700 "Late bird", ₹1200 "Very late bird". The
 admin panel's price dialog picks a tier (or a custom amount); the number itself
 still lives in `TICKET_PRICE` in Script Properties. The `TIERS` map exists twice:
 in `index.html` (label + signed QR image per amount) and `admin.html` (labels).

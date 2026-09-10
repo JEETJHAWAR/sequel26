@@ -398,9 +398,10 @@ const ST = { STARTED:"Awaiting payment", CLAIMED:"Verifying", PAID:"Paid", REJEC
 /* Price tiers — keep labels in sync with TIERS in index.html, where each
    tier also names its bank-signed QR image. */
 const TIERS = [
-  { price: 800,  label: "Early bird" },
-  { price: 1000, label: "Regular"    },
-  { price: 1200, label: "Last call"  }
+  { price: 800,  label: "Early bird"     },
+  { price: 1000, label: "Regular"        },
+  { price: 700,  label: "Late bird"      },
+  { price: 1200, label: "Very late bird" }
 ];
 const tierLabel = p => {
   const t = TIERS.find(t => t.price === Number(p));
