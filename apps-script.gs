@@ -12,7 +12,7 @@
  *   2. Project Settings (gear, left sidebar) > Script Properties,
  *      add two properties:
  *
- *        ADMIN_PASSWORD   iimkfreshers26
+ *        ADMIN_PASSWORD   <choose-a-password>
  *        TICKET_PRICE     800
  *
  *      The password lives here, NOT in admin.html, because your GitHub
