@@ -44,7 +44,7 @@ in the page — that's fine, a UPI ID is a public payment address.
 
    | Property | Value |
    |---|---|
-   | `ADMIN_PASSWORD` | `iimkfreshers26` |
+   | `ADMIN_PASSWORD` | `<choose-a-password>` |
    | `TICKET_PRICE` | `800` |
 
 5. Back in the editor → run **`setup`** → grant permissions
